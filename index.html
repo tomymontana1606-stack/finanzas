@@ -1954,7 +1954,7 @@ function renderCuotas() {
   }
   const html = ventas.map(v => {
     const pendientes = v.cuotas.filter(c => !c.pagada);
-    const subtotal = pendientes.reduce((s,c) => s + (c.montoCobrado||c.monto), 0);
+    const subtotal = pendientes.reduce((s,c) => s + c.monto, 0);
     totalPorCobrar += subtotal;
     const porcentaje = v.nCuotas > 0 ? Math.round(((v.nCuotas - pendientes.length) / v.nCuotas) * 100) : 100;
     const cuotasHtml = v.cuotas.map((c,i) => {
@@ -2465,7 +2465,8 @@ function generarReciboPDF(ventaId) {
   const fechaEmision = hoy.toLocaleDateString('es-AR', { day:'2-digit', month:'long', year:'numeric' });
   const nRecibo = String(ventaId).replace('V','').slice(-8);
 
-  const cobrado   = v.cuotas.filter(c=>c.pagada).reduce((s,c)=>s+(c.montoCobrado||c.monto),0);
+  const cobradoCuotas = v.cuotas.filter(c=>c.pagada).reduce((s,c)=>s+(c.montoCobrado||c.monto),0);
+  const cobrado   = cobradoCuotas + (v.adelanto||0);
   const pendiente = v.cuotas.filter(c=>!c.pagada).reduce((s,c)=>s+c.monto,0);
 
   const cuotasRows = v.cuotas.map(c => {
@@ -2544,7 +2545,7 @@ function generarReciboPDF(ventaId) {
     </div>
     <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:12px;padding:16px;text-align:center">
       <div style="font-size:9px;letter-spacing:2px;color:#15803d;text-transform:uppercase;margin-bottom:6px">Cobrado</div>
-      <div style="font-size:22px;font-weight:800;color:#16a34a">${fmt(cobrado + v.adelanto)}</div>
+      <div style="font-size:22px;font-weight:800;color:#16a34a">${fmt(cobrado)}</div>
     </div>
     <div style="background:${pendiente>0?'#fff7ed':'#f0fdf4'};border:1.5px solid ${pendiente>0?'#fed7aa':'#bbf7d0'};border-radius:12px;padding:16px;text-align:center">
       <div style="font-size:9px;letter-spacing:2px;color:${pendiente>0?'#c2410c':'#15803d'};text-transform:uppercase;margin-bottom:6px">Pendiente</div>
