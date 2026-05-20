@@ -114,7 +114,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
 /* MODAL */
 .modal-overlay { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:99999; padding:16px; pointer-events:none; transform:none !important; }
 .modal-overlay.open { display:flex; pointer-events:auto; }
-.modal { background:var(--card); border:1px solid rgba(37,99,235,.2); border-radius:16px; padding:28px; width:100%; max-width:500px; max-height:92vh; overflow-y:auto; position:relative; z-index:100000; }
+.modal { background:var(--card); border:1px solid rgba(37,99,235,.2); border-radius:16px; padding:28px; width:100%; max-width:500px; max-height:92vh; overflow-y:auto; position:relative; z-index:100000; pointer-events:auto; }
 .modal-title { font-size:16px; font-weight:500; margin-bottom:6px; }
 .modal-sub { font-size:12px; color:var(--muted); margin-bottom:20px; }
 .form-group { margin-bottom:14px; }
