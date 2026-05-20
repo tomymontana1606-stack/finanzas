@@ -1992,15 +1992,16 @@ function renderCuotas() {
     }).join('');
     const notasHtml = v.notas ? `<div style="margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:6px;font-size:11px;color:var(--muted)">${v.notas}</div>` : '';
     return `
-      <div class="venta-card" style="${(() => {
+      <div class="venta-card ${(() => {
               const hoy = new Date();
               const tieneVencidas = v.cuotas.some(c => {
+                if (!c || !c.vencimiento || c.pagada) return false;
                 const pts = c.vencimiento.split('/');
                 if (pts.length !== 3) return false;
                 const [dd, mm, yy] = pts.map(Number);
-                return !c.pagada && new Date(yy, mm-1, dd) < hoy;
+                return new Date(yy, mm-1, dd) < hoy;
               });
-              return (saldoReal > 0 || tieneVencidas) ? 'border-color:rgba(231,76,60,.5);border-width:2px;background:rgba(231,76,60,.04)' : '';
+              return (saldoReal > 0 || tieneVencidas) ? 'pendiente' : '';
             })()}">
         <div class="venta-header">
           <div>
