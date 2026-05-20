@@ -375,14 +375,6 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
     <div class="login-logo">Top Realtors</div>
     <div class="login-title">Panel Financiero</div>
     <div class="login-tagline">SISTEMA DE GESTIÓN INTERNO</div>
-    <div style="margin-bottom:12px">
-      <label style="font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:6px">Usuario</label>
-      <select id="login-usuario" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#fff;padding:12px 14px;border-radius:10px;font-size:14px;outline:none">
-        <option value="">— Seleccioná tu usuario —</option>
-        <option value="frank">Frank (Admin)</option>
-        <option value="admin">Admin (Acceso total)</option>
-      </select>
-    </div>
     <input type="password" id="password-input" placeholder="Contraseña" onkeydown="if(event.key==='Enter')login()" />
     <button class="btn-primary" onclick="login()">Entrar</button>
     <div class="login-error" id="login-error">Contraseña incorrecta</div>
@@ -1108,24 +1100,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
       <input class="form-input" type="number" id="mie-valor" placeholder="0" min="0" step="0.01" />
       <div class="form-hint" id="mie-hint"></div>
     </div>
-    <div style="background:rgba(37,99,235,0.06);border:1px solid rgba(37,99,235,0.2);border-radius:var(--rsm);padding:12px 14px;margin-top:8px">
-      <div style="font-size:11px;color:var(--accent);font-weight:500;margin-bottom:10px">🔐 Acceso al panel (opcional)</div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Contraseña de acceso</label>
-          <input class="form-input" type="password" id="mie-pass" placeholder="Dejar vacío = sin acceso" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Permisos</label>
-          <select class="form-select" id="mie-rol-acceso">
-            <option value="">Sin acceso al panel</option>
-            <option value="vendedor">Vendedor — ve sus ventas y cuotas</option>
-            <option value="viewer">Solo lectura — ve sus registros</option>
-            <option value="admin">Admin — acceso total</option>
-          </select>
-        </div>
-      </div>
-    </div>
+
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('miembro')">Cancelar</button>
       <button class="btn-save" onclick="saveMiembro()">Guardar</button>
@@ -1307,14 +1282,7 @@ window.onload = () => {
     if (el) el.value = hoy;
   });
   fillPeriodSelects();
-  // Cargar usuarios extra en el select de login
-  actualizarSelectLogin();
-  CURRENT_USER = JSON.parse(localStorage.getItem('dash_current_user') || 'null');
-  if (!CURRENT_USER && TOKEN) {
-    CURRENT_USER = { key:'admin', rol:'admin', nombre:'Admin' };
-    localStorage.setItem('dash_current_user', JSON.stringify(CURRENT_USER));
-  }
-  if (TOKEN && CURRENT_USER) showApp();
+  if (TOKEN) showApp();
 };
 
 function actualizarSelectLogin() {
@@ -1363,10 +1331,6 @@ function fillVendedorSelects() {
 // LOAD ALL — una sola vez
 // ============================================================
 async function showApp() {
-  // Restore current user from localStorage if exists
-  if (!CURRENT_USER) {
-    CURRENT_USER = JSON.parse(localStorage.getItem('dash_current_user') || 'null');
-  }
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('global-loader').style.display = 'flex';
   try {
@@ -1401,7 +1365,6 @@ async function showApp() {
     opts.push({ label:'Todos los meses', mes:'', anio:'' });
     repPeriod.innerHTML = opts.map((o,i) => `<option value="${o.mes}|${o.anio}" ${i===0?'selected':''}>${o.label}</option>`).join('');
   }
-  aplicarPermisos();
   try { renderDashboardFromCache(); } catch(e) { console.error('renderDashboard:', e); }
   try { renderIngresosFromCache(); } catch(e) { console.error('renderIngresos:', e); }
   try { renderGastosFromCache(); } catch(e) { console.error('renderGastos:', e); }
@@ -2510,18 +2473,6 @@ async function saveMiembro() {
   fillVendedorSelects();
   showToast('Guardando...','ok');
 
-  // Guardar usuario de acceso si tiene contraseña
-  const pass = document.getElementById('mie-pass')?.value.trim();
-  const rolAcceso = document.getElementById('mie-rol-acceso')?.value;
-  if (pass && rolAcceso) {
-    const key = nombre.toLowerCase().replace(/\s+/g,'_');
-    const usuarios = JSON.parse(localStorage.getItem('dash_usuarios') || '{}');
-    usuarios[key] = { pass, rol:rolAcceso, nombre };
-    localStorage.setItem('dash_usuarios', JSON.stringify(usuarios));
-    actualizarSelectLogin();
-    showToast(`Usuario "${nombre}" creado con acceso ✓`,'ok');
-  }
-
   // Sincronizar con Sheet
   try {
     const res = await api({ action:'addMiembro', nombre, rol, tipo, valor, activo:true });
@@ -2748,51 +2699,29 @@ function getUsuarios() {
 const USUARIOS = USUARIOS_BASE;
 
 async function login() {
-  const usuarioKey = document.getElementById('login-usuario').value;
   const pw = document.getElementById('password-input').value.trim();
   const err = document.getElementById('login-error');
   err.style.display = 'none';
-
-  if (!usuarioKey) { err.style.display='block'; err.textContent='Seleccioná un usuario'; return; }
-  if (!pw)         { err.style.display='block'; err.textContent='Ingresá la contraseña';  return; }
-
-  const todosUsuarios = getUsuarios();
-  const u = todosUsuarios[usuarioKey];
-  if (!u) { err.style.display='block'; err.textContent='Usuario no encontrado'; return; }
-
-  // Verificar contraseña localmente
-  if (pw !== u.pass) { err.style.display='block'; err.textContent='Contraseña incorrecta'; return; }
-
-  // Para admins también intentar validar con el Sheet (opcional, no bloquea)
-  TOKEN = btoa(pw + ':' + usuarioKey + ':' + Date.now());
-  // Si es admin intentar obtener token real del Sheet (sin bloquear si falla)
-  if (u.rol === 'admin') {
-    try {
-      const res = await Promise.race([
-        api({ action:'login', password:pw }, false),
-        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))
-      ]);
-      if (res && res.ok && res.token) TOKEN = res.token;
-    } catch(e) {
-      console.warn('Sheet login failed, using local token:', e.message);
-    }
-  }
-
+  if (!pw) { err.style.display='block'; err.textContent='Ingresá la contraseña'; return; }
+  if (pw !== 'TopAdmin23$') { err.style.display='block'; err.textContent='Contraseña incorrecta'; return; }
+  TOKEN = btoa(pw + ':' + Date.now());
+  try {
+    const res = await Promise.race([
+      api({ action:'login', password:pw }, false),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))
+    ]);
+    if (res && res.ok && res.token) TOKEN = res.token;
+  } catch(e) {}
   localStorage.setItem('dash_token', TOKEN);
-  CURRENT_USER = { key: usuarioKey, ...u };
-  localStorage.setItem('dash_current_user', JSON.stringify(CURRENT_USER));
-  logAccion('login', 'Ingresó al sistema');
   showApp();
 }
 
 function logout() {
-  TOKEN = ''; CURRENT_USER = null;
+  TOKEN = '';
   localStorage.removeItem('dash_token');
-  localStorage.removeItem('dash_current_user');
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('password-input').value = '';
-  document.getElementById('login-usuario').value = '';
 }
 
 function esAdmin() { return !CURRENT_USER || CURRENT_USER.rol === 'admin'; }
