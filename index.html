@@ -1954,9 +1954,13 @@ function renderCuotas() {
   }
   const html = ventas.map(v => {
     const pendientes = v.cuotas.filter(c => !c.pagada);
-    const subtotal = pendientes.reduce((s,c) => s + c.monto, 0);
+    const cobradoEnCuotas = v.cuotas.filter(c => c.pagada).reduce((s,c) => s + (c.montoCobrado||c.monto), 0);
+    const saldoReal = Math.max(0, v.total - (v.adelanto||0) - cobradoEnCuotas);
+    const subtotal = pendientes.length > 0
+      ? pendientes.reduce((s,c) => s + c.monto, 0)
+      : saldoReal;
     totalPorCobrar += subtotal;
-    const porcentaje = v.nCuotas > 0 ? Math.round(((v.nCuotas - pendientes.length) / v.nCuotas) * 100) : 100;
+    const porcentaje = saldoReal === 0 ? 100 : v.nCuotas > 0 ? Math.round(((v.nCuotas - pendientes.length) / v.nCuotas) * 100) : 100;
     const cuotasHtml = v.cuotas.map((c,i) => {
       let estado = 'pendiente';
       if (c.pagada) { estado='pagada'; cuotasCobradas++; }
@@ -1999,7 +2003,7 @@ function renderCuotas() {
         </div>
         <div class="venta-stats">
           <div><span class="venta-stat-label">Adelanto</span><span class="venta-stat-val" style="color:var(--green)">${fmt(v.adelanto)}</span></div>
-          <div><span class="venta-stat-label">Saldo</span><span class="venta-stat-val" style="color:var(--gold)">${fmt(subtotal)}</span></div>
+          <div><span class="venta-stat-label">Saldo pendiente</span><span class="venta-stat-val" style="color:${saldoReal>0?'var(--red)':'var(--green)'}">${fmt(saldoReal)}</span></div>
           <div><span class="venta-stat-label">Cuotas</span><span class="venta-stat-val">${v.nCuotas - pendientes.length}/${v.nCuotas} cobradas</span></div>
         </div>
         <div class="venta-progress"><div class="venta-progress-fill" style="width:${porcentaje}%"></div></div>
