@@ -1945,7 +1945,9 @@ function renderCuotas() {
   const ventas = JSON.parse(localStorage.getItem('dash_ventas') || '[]');
   const hoy = new Date(); hoy.setHours(0,0,0,0);
   const container = document.getElementById('ventas-cuotas-list');
-  let totalPorCobrar = 0, cuotasVencidas = 0, cuotasCobradas = 0;
+  let totalPorCobrar = 0, cuotasVencidas = 0, cuotasCobradas = 0, cuotasPorVencer = 0;
+  const hoyVencer = new Date();
+  const en15dias = new Date(hoyVencer.getTime() + 15 * 24 * 60 * 60 * 1000);
   if (!ventas.length) {
     container.innerHTML = '<div class="empty">Sin ventas con cuotas registradas.<br>Usá "Nueva venta" para registrar una.</div>';
     document.getElementById('cuota-total').textContent = fmt(0);
