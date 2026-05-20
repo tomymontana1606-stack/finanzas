@@ -25,7 +25,7 @@
   --rsm:     8px;
   --font: -apple-system,'Segoe UI',sans-serif;
 }
-body { background:var(--bg); color:var(--text); font-family:var(--font); font-size:14px; min-height:100vh; line-height:1.5; transform:none; will-change:unset; }
+body { background:var(--bg); color:var(--text); font-family:var(--font); font-size:14px; min-height:100vh; line-height:1.5; }
 
 /* LOGIN */
 #login-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:24px; }
@@ -112,9 +112,9 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
 .actions-cell { display:flex; gap:5px; justify-content:flex-end; align-items:center; }
 
 /* MODAL */
-.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:99999; padding:16px; }
+.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.8); display:none; align-items:center; justify-content:center; z-index:200; padding:16px; }
 .modal-overlay.open { display:flex; }
-.modal { background:var(--card); border:1px solid rgba(37,99,235,.2); border-radius:16px; padding:28px; width:100%; max-width:500px; max-height:92vh; overflow-y:auto; position:relative; z-index:100000; }
+.modal { background:var(--card); border:1px solid rgba(37,99,235,.2); border-radius:16px; padding:28px; width:100%; max-width:500px; max-height:92vh; overflow-y:auto; }
 .modal-title { font-size:16px; font-weight:500; margin-bottom:6px; }
 .modal-sub { font-size:12px; color:var(--muted); margin-bottom:20px; }
 .form-group { margin-bottom:14px; }
@@ -375,7 +375,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
     <div class="login-logo">Top Realtors</div>
     <div class="login-title">Panel Financiero</div>
     <div class="login-tagline">SISTEMA DE GESTIÓN INTERNO</div>
-    <input type="password" id="password-input" placeholder="Contraseña" onkeydown="if(event.key==='Enter')login()" />
+    <input type="password" id="password-input" placeholder="Contraseña" />
     <button class="btn-primary" onclick="login()">Entrar</button>
     <div class="login-error" id="login-error">Contraseña incorrecta</div>
   </div>
@@ -410,10 +410,6 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
       Cuotas
     </button>
-    <button class="nav-item" onclick="abrirBusqueda()" style="margin-top:4px">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-      Búsqueda
-    </button>
     <div class="nav-section">Gestión</div>
     <button class="nav-item" onclick="showSection('tesoreria',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><circle cx="12" cy="14" r="2"/></svg>
@@ -427,19 +423,11 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg>
       Equipo
     </button>
-    <button class="nav-item" id="nav-reportes" onclick="showSection('reportes',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-      Reportes
-    </button>
     <div class="sidebar-footer">
       <div style="padding:8px 10px;margin-bottom:8px;background:var(--faint);border-radius:var(--rsm);cursor:pointer" onclick="showSection('configuraciones',null)" title="Cambiar tipo de cambio">
         <div style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:2px">USD / ARS</div>
         <div style="font-size:13px;font-weight:500;color:var(--gold)" id="sidebar-tasa">$<span id="sidebar-tasa-val">—</span></div>
       </div>
-      <button class="nav-item" id="nav-historial" onclick="showSection('historial',this)" style="margin-bottom:4px">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        Historial
-      </button>
       <button class="nav-item" onclick="showSection('configuraciones',this)" style="margin-bottom:6px">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         Configuraciones
@@ -712,34 +700,8 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
 
     </section>
 
-    <!-- REPORTES -->
-    <section id="section-reportes" class="section">
-      <div class="page-header">
-        <div><div class="page-title">Reportes por vendedor</div><div class="page-sub">Rendimiento individual del equipo</div></div>
-        <select class="period-select" id="rep-period" onchange="renderReportes()"></select>
-      </div>
-      <div class="metrics-grid" id="rep-totales" style="margin-bottom:20px"></div>
-      <div id="rep-vendedores"></div>
-    </section>
-
-    <!-- HISTORIAL -->
-    <section id="section-historial" class="section">
-      <div class="page-header">
-        <div><div class="page-title">Historial de cambios</div><div class="page-sub">Registro de acciones del sistema</div></div>
-        <button class="btn-add cfg-red" style="padding:8px 14px;font-size:12px" onclick="if(confirm('¿Limpiar el historial?')){localStorage.removeItem('dash_log');renderHistorial();}">Limpiar</button>
-      </div>
-      <div class="table-card">
-        <table class="data-table">
-          <thead><tr><th>Fecha/hora</th><th>Usuario</th><th>Acción</th><th>Detalle</th></tr></thead>
-          <tbody id="tbody-historial"></tbody>
-        </table>
-      </div>
-    </section>
-
   </main>
 </div>
-
-<div class="toast" id="toast"></div>
 
 <!-- ======= MODALES ======= -->
 
@@ -877,7 +839,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
     </div>
     <div class="form-group"><label class="form-label">Concepto</label><input class="form-input" id="gas-concepto" placeholder="Descripción del gasto" /></div>
     <div class="form-row">
-      <div class="form-group"><label class="form-label">Monto</label><div style="display:flex;gap:6px"><select class="form-select" id="gas-moneda" style="width:90px"><option value="USD">USD</option><option value="ARS">ARS</option><option value="EUR">EUR</option><option value="USDT">USDT</option></select><input class="form-input" type="number" id="gas-monto" placeholder="0" min="0" step="0.01" /></div>
+      <div class="form-group"><label class="form-label">Monto (USD)</label><input class="form-input" type="number" id="gas-monto" placeholder="0" min="0" step="0.01" /></div>
       <div class="form-group">
         <label class="form-label">Método de pago</label>
         <select class="form-select" id="gas-metodo">
@@ -1100,7 +1062,6 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
       <input class="form-input" type="number" id="mie-valor" placeholder="0" min="0" step="0.01" />
       <div class="form-hint" id="mie-hint"></div>
     </div>
-
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('miembro')">Cancelar</button>
       <button class="btn-save" onclick="saveMiembro()">Guardar</button>
@@ -1259,6 +1220,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
   </div>
 </div>
 
+<div class="toast" id="toast"></div>
 
 <script>
 // ============================================================
@@ -1267,7 +1229,6 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
 const API_URL = 'https://script.google.com/macros/s/AKfycby8HarjoDseXYtV5dfsh-_nCVUt_VVMeB7zjQNinpOsV9qr9BoUt8IOLb3UwN5XmmvHzA/exec';
 
 let TOKEN = localStorage.getItem('dash_token') || '';
-let CURRENT_USER = null;
 let CACHE = { ingresos:[], gastos:[], equipo:[], subs:[], ventas:[] };
 let charts = {};
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -1284,20 +1245,6 @@ window.onload = () => {
   fillPeriodSelects();
   if (TOKEN) showApp();
 };
-
-function actualizarSelectLogin() {
-  const sel = document.getElementById('login-usuario');
-  if (!sel) return;
-  const extra = JSON.parse(localStorage.getItem('dash_usuarios') || '{}');
-  // Mantener opciones base
-  const baseOpts = `<option value="">— Seleccioná tu usuario —</option>
-        <option value="frank">Frank (Admin)</option>
-        <option value="admin">Admin (Acceso total)</option>`;
-  const extraOpts = Object.entries(extra).map(([k,u]) =>
-    `<option value="${k}">${u.nombre}${u.rol==='admin'?' (Admin)':''}</option>`
-  ).join('');
-  sel.innerHTML = baseOpts + extraOpts;
-}
 
 function fillPeriodSelects() {
   const now = new Date();
@@ -1327,6 +1274,33 @@ function fillVendedorSelects() {
 // ============================================================
 // AUTH
 // ============================================================
+async function login() {
+  const pw = document.getElementById('password-input').value.trim();
+  const err = document.getElementById('login-error');
+  if (!pw) return;
+  try {
+    const res = await api({ action:'login', password:pw }, false);
+    if (res.ok) {
+      TOKEN = res.token;
+      localStorage.setItem('dash_token', TOKEN);
+      showApp();
+    } else {
+      err.style.display = 'block';
+      err.textContent = 'Contraseña incorrecta';
+    }
+  } catch(e) {
+    err.style.display = 'block';
+    err.textContent = 'Error de conexión';
+  }
+}
+
+function logout() {
+  TOKEN = '';
+  localStorage.removeItem('dash_token');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
 // ============================================================
 // LOAD ALL — una sola vez
 // ============================================================
@@ -1334,44 +1308,26 @@ async function showApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('global-loader').style.display = 'flex';
   try {
-    const res = await Promise.race([
-      api({ action:'getDashboardAll' }),
-      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 15000))
-    ]);
-    if (res && res.ok) {
+    const res = await api({ action:'getDashboardAll' });
+    if (res.ok) {
       CACHE.ingresos = res.data.ingresos || [];
       CACHE.gastos   = res.data.gastos   || [];
       CACHE.equipo   = res.data.equipo   || [];
     }
-  } catch(e) {
-    console.warn('getDashboardAll falló:', e.message, '— continuando sin datos del Sheet');
-  }
-  CACHE.subs = JSON.parse(localStorage.getItem('dash_subs') || '[]');
+    // Subs desde localStorage
+    CACHE.subs = JSON.parse(localStorage.getItem('dash_subs') || '[]');
+  } catch(e) {}
 
   document.getElementById('global-loader').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   actualizarInfoTasa();
   fillVendedorSelects();
-  fillPeriodSelects();
-  // Rellenar period select de reportes
-  const repPeriod = document.getElementById('rep-period');
-  if (repPeriod) {
-    const now = new Date();
-    const opts = [];
-    for (let i = 0; i < 12; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      opts.push({ label:`${MESES[d.getMonth()]} ${d.getFullYear()}`, mes:MESES[d.getMonth()], anio:d.getFullYear() });
-    }
-    opts.push({ label:'Todos los meses', mes:'', anio:'' });
-    repPeriod.innerHTML = opts.map((o,i) => `<option value="${o.mes}|${o.anio}" ${i===0?'selected':''}>${o.label}</option>`).join('');
-  }
-  try { renderDashboardFromCache(); } catch(e) { console.error('renderDashboard:', e); }
-  try { renderIngresosFromCache(); } catch(e) { console.error('renderIngresos:', e); }
-  try { renderGastosFromCache(); } catch(e) { console.error('renderGastos:', e); }
-  try { renderEquipo(); } catch(e) { console.error('renderEquipo:', e); }
-  try { renderSubs(); } catch(e) { console.error('renderSubs:', e); }
-  try { renderCuotas(); } catch(e) { console.error('renderCuotas:', e); }
-  try { checkNotificaciones(); } catch(e) { console.error('checkNotif:', e); }
+  renderDashboardFromCache();
+  renderIngresosFromCache();
+  renderGastosFromCache();
+  renderEquipo();
+  renderSubs();
+  renderCuotas();
 }
 
 // ============================================================
@@ -1379,17 +1335,8 @@ async function showApp() {
 // ============================================================
 async function api(body, auth=true) {
   if (auth) body.token = TOKEN;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 12000); // 12s timeout
-  try {
-    const res = await fetch(API_URL, { method:'POST', body:JSON.stringify(body), signal:controller.signal });
-    clearTimeout(timeout);
-    return res.json();
-  } catch(e) {
-    clearTimeout(timeout);
-    console.warn('API error:', body.action, e.message);
-    throw e;
-  }
+  const res = await fetch(API_URL, { method:'POST', body:JSON.stringify(body) });
+  return res.json();
 }
 
 function getPeriod(id) {
@@ -1750,20 +1697,13 @@ async function saveIngresoSimple() {
   const vendedor = document.getElementById('is-vendedor').value;
   const concepto = document.getElementById('is-concepto').value.trim();
   const monto    = parseFloat(document.getElementById('is-monto').value);
-  const moneda   = document.getElementById('is-moneda')?.value || 'USD';
   if (!nombre || !monto) { showToast('Completá nombre y monto','err'); return; }
-
-  const tasa = getTasa();
-  const montoUSD = moneda === 'ARS' ? monto / tasa : moneda === 'EUR' ? monto * 1.08 : monto;
-  const conceptoFinal = concepto + (moneda !== 'USD' ? ` (${moneda} ${monto.toLocaleString('es-AR')})` : '');
-
   try {
-    const res = await api({ action:'addIngreso', nombre, fecha, concepto:conceptoFinal, monto:montoUSD, vendedor, esVenta:false });
+    const res = await api({ action:'addIngreso', nombre, fecha, concepto, monto, vendedor, esVenta:false });
     if (res.ok) {
       const d = parseFechaLocal(fecha);
-      CACHE.ingresos.unshift({ id:res.id, fecha, nombre, concepto:conceptoFinal, monto:montoUSD, vendedor, esVenta:false, mes:d.mes, anio:d.anio, moneda });
+      CACHE.ingresos.unshift({ id:res.id, fecha, nombre, concepto, monto, vendedor, esVenta:false, mes:d.mes, anio:d.anio });
       showToast('Ingreso agregado ✓','ok');
-      logAccion('ingreso', `${nombre} — ${moneda} ${monto.toLocaleString('es-AR')}${moneda!=='USD'?' (≈'+fmt(montoUSD)+')':''}`);
       closeModal('ingreso-simple');
       clearForm(['is-nombre','is-concepto','is-monto']);
       renderIngresosFromCache();
@@ -1819,7 +1759,6 @@ async function saveVenta() {
     localStorage.setItem('dash_ventas', JSON.stringify(ventas));
 
     showToast('Venta registrada ✓','ok');
-    logAccion('venta', `Nueva venta: ${cliente} — ${producto} — ${fmt(total)}`);
     closeModal('venta');
     clearForm(['v-cliente','v-telefono','v-email','v-producto','v-total','v-adelanto','v-notas']);
     document.getElementById('v-resumen').style.display = 'none';
@@ -1933,22 +1872,15 @@ async function saveGasto() {
   const fecha     = document.getElementById('gas-fecha').value;
   const concepto  = document.getElementById('gas-concepto').value.trim();
   const monto     = parseFloat(document.getElementById('gas-monto').value);
-  const moneda    = document.getElementById('gas-moneda')?.value || 'USD';
   const metodo    = document.getElementById('gas-metodo').value;
   const pagador   = document.getElementById('gas-pagador').value;
   if (!monto) { showToast('Ingresá un monto','err'); return; }
-
-  const tasa = getTasa();
-  const montoUSD = moneda === 'ARS' ? monto / tasa : moneda === 'EUR' ? monto * 1.08 : monto;
-  const conceptoFinal = concepto + (moneda !== 'USD' ? ` (${moneda} ${monto.toLocaleString('es-AR')})` : '');
-
   try {
-    const res = await api({ action:'addGasto', categoria, fecha, concepto:conceptoFinal, monto:montoUSD });
+    const res = await api({ action:'addGasto', categoria, fecha, concepto, monto });
     if (res.ok) {
       const d = parseFechaLocal(fecha);
-      CACHE.gastos.unshift({ id:res.id, fecha, categoria, concepto:conceptoFinal, monto:montoUSD, metodo, pagador, moneda, mes:d.mes, anio:d.anio });
+      CACHE.gastos.unshift({ id:res.id, fecha, categoria, concepto, monto, metodo, pagador, mes:d.mes, anio:d.anio });
       showToast('Gasto agregado ✓','ok');
-      logAccion('gasto', `${categoria} — ${concepto} — ${moneda} ${monto.toLocaleString('es-AR')}${moneda!=='USD'?' (≈'+fmt(montoUSD)+')':''} · ${pagador||''}`);
       closeModal('gasto');
       clearForm(['gas-concepto','gas-monto','gas-cat-custom']);
       document.getElementById('gas-cat-custom-wrap').style.display = 'none';
@@ -2196,7 +2128,6 @@ function confirmarCobro() {
     }
   }
   showToast(toastMsg, 'ok');
-  logAccion('cobro', `Cuota ${c.num}/${v.nCuotas} de ${v.cliente} — ${fmt(monto)} (${metodo})`);
   renderCuotas();
   if (cuentaId) renderTesoreria();
 }
@@ -2458,34 +2389,21 @@ async function saveMiembro() {
   const nombre = document.getElementById('mie-nombre').value.trim();
   const rol    = document.getElementById('mie-rol').value.trim();
   const tipo   = document.getElementById('mie-tipo').value;
-  const valor  = tipo === 'restante' ? 0 : parseFloat(document.getElementById('mie-valor').value) || 0;
+  const valor  = tipo === 'restante' ? 0 : parseFloat(document.getElementById('mie-valor').value);
   if (!nombre) { showToast('Completá el nombre','err'); return; }
   if (tipo !== 'restante' && !valor) { showToast('Completá el valor','err'); return; }
-
-  // Guardar localmente primero para UI inmediata
-  const localId = 'M_' + Date.now();
-  const miembro = { id:localId, nombre, rol, tipo, valor, activo:true };
-  CACHE.equipo.push(miembro);
-  closeModal('miembro');
-  clearForm(['mie-nombre','mie-rol','mie-valor']);
-  renderEquipo();
-  renderDashboardFromCache();
-  fillVendedorSelects();
-  showToast('Guardando...','ok');
-
-  // Sincronizar con Sheet
   try {
     const res = await api({ action:'addMiembro', nombre, rol, tipo, valor, activo:true });
     if (res.ok) {
-      const idx = CACHE.equipo.findIndex(m => m.id === localId);
-      if (idx >= 0) CACHE.equipo[idx].id = res.id;
-      showToast('Miembro guardado ✓','ok');
-      logAccion('miembro', nombre + ' — ' + rol);
+      CACHE.equipo.push({ id:res.id, nombre, rol, tipo, valor, activo:true });
+      showToast('Miembro agregado ✓','ok');
+      closeModal('miembro');
+      clearForm(['mie-nombre','mie-rol','mie-valor']);
+      renderEquipo();
+      renderDashboardFromCache();
+      fillVendedorSelects();
     }
-  } catch(e) {
-    showToast('Guardado local (Sheet sin conexión)','ok');
-    console.warn('saveMiembro Sheet error:', e);
-  }
+  } catch(e) { showToast('Error guardando','err'); }
 }
 
 function editMiembro(id) {
@@ -2680,366 +2598,6 @@ function generarReciboPDF(ventaId) {
   win.document.write(html);
   win.document.close();
   showToast('Recibo generado ✓','ok');
-}
-
-// ============================================================
-// USUARIOS Y PERMISOS
-// ============================================================
-// Usuarios base (admins fijos). El resto se agrega desde panel Equipo.
-const USUARIOS_BASE = {
-  frank: { pass:'TopAdmin23$', rol:'admin', nombre:'Frank' },
-  admin: { pass:'TopAdmin23$', rol:'admin', nombre:'Admin' },
-};
-
-function getUsuarios() {
-  const extra = JSON.parse(localStorage.getItem('dash_usuarios') || '{}');
-  return { ...USUARIOS_BASE, ...extra };
-}
-// Alias para compatibilidad
-const USUARIOS = USUARIOS_BASE;
-
-async function login() {
-  const pw = document.getElementById('password-input').value.trim();
-  const err = document.getElementById('login-error');
-  err.style.display = 'none';
-  if (!pw) { err.style.display='block'; err.textContent='Ingresá la contraseña'; return; }
-  if (pw !== 'TopAdmin23$') { err.style.display='block'; err.textContent='Contraseña incorrecta'; return; }
-  TOKEN = btoa(pw + ':' + Date.now());
-  try {
-    const res = await Promise.race([
-      api({ action:'login', password:pw }, false),
-      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))
-    ]);
-    if (res && res.ok && res.token) TOKEN = res.token;
-  } catch(e) {}
-  localStorage.setItem('dash_token', TOKEN);
-  showApp();
-}
-
-function logout() {
-  TOKEN = '';
-  localStorage.removeItem('dash_token');
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('password-input').value = '';
-}
-
-function esAdmin() { return !CURRENT_USER || CURRENT_USER.rol === 'admin'; }
-function esVendedor() { return CURRENT_USER?.rol === 'vendedor'; }
-function nombreUsuario() { return CURRENT_USER?.nombre || 'Admin'; }
-
-function aplicarPermisos() {
-  try {
-    const badge = document.getElementById('dash-usuario-badge');
-    if (badge) badge.textContent = nombreUsuario();
-    if (esAdmin()) return; // Admins ven todo
-    document.querySelectorAll('.nav-item').forEach(btn => {
-      const oc = btn.getAttribute('onclick') || '';
-      const restringidas = ["'gastos'","'tesoreria'","'equipo'","'configuraciones'","'historial'"];
-      if (restringidas.some(s => oc.includes(s))) btn.style.display = 'none';
-    });
-    ['nav-historial','nav-reportes'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = 'none';
-    });
-  } catch(e) { console.warn('aplicarPermisos error:', e); }
-}
-
-// ============================================================
-// HISTORIAL DE CAMBIOS
-// ============================================================
-function logAccion(tipo, detalle) {
-  const log = JSON.parse(localStorage.getItem('dash_log') || '[]');
-  log.unshift({
-    ts: new Date().toISOString(),
-    usuario: nombreUsuario(),
-    tipo,
-    detalle
-  });
-  if (log.length > 500) log.splice(500);
-  localStorage.setItem('dash_log', JSON.stringify(log));
-}
-
-function renderHistorial() {
-  const log = JSON.parse(localStorage.getItem('dash_log') || '[]');
-  const tbody = document.getElementById('tbody-historial');
-  if (!tbody) return;
-  const iconos = { login:'🔐', cobro:'💰', venta:'📝', gasto:'💸', ingreso:'➕', eliminar:'🗑️', editar:'✏️', sub:'🔗', miembro:'👤', tesoreria:'🏦' };
-  tbody.innerHTML = log.length ? log.map(r => {
-    const dt = new Date(r.ts);
-    const hora = dt.toLocaleDateString('es-AR') + ' ' + dt.toLocaleTimeString('es-AR', {hour:'2-digit',minute:'2-digit'});
-    const icono = Object.entries(iconos).find(([k]) => r.tipo.includes(k))?.[1] || '📋';
-    return `<tr>
-      <td style="color:var(--muted);font-size:12px;white-space:nowrap">${hora}</td>
-      <td><span class="tag tag-blue">${r.usuario}</span></td>
-      <td>${icono} <span style="font-size:12px">${r.tipo}</span></td>
-      <td style="font-size:12px;color:rgba(255,255,255,0.7)">${r.detalle}</td>
-    </tr>`;
-  }).join('') : '<tr><td colspan="4"><div class="empty">Sin registros aún</div></td></tr>';
-}
-
-// ============================================================
-// BÚSQUEDA GLOBAL
-// ============================================================
-function abrirBusqueda() {
-  // Crear el overlay dinámicamente para no interferir con el DOM base
-  if (document.getElementById('global-search-bar')) cerrarBusqueda();
-  const bar = document.createElement('div');
-  bar.id = 'global-search-bar';
-  bar.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px)';
-  bar.innerHTML = `
-    <div style="max-width:680px;margin:60px auto 0;padding:0 20px">
-      <div style="background:#1a1a1a;border:1px solid rgba(255,255,255,0.12);border-radius:16px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,0.6)">
-        <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.08)">
-          <svg width="18" height="18" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input id="search-input" placeholder="Buscar cliente, concepto, monto..." autocomplete="off"
-            style="flex:1;background:transparent;border:none;color:#fff;font-size:16px;outline:none"
-            oninput="renderBusqueda(this.value)" />
-          <button onclick="cerrarBusqueda()" style="background:none;border:none;color:rgba(255,255,255,0.4);cursor:pointer;font-size:20px;padding:0;line-height:1">✕</button>
-        </div>
-        <div id="search-results" style="max-height:480px;overflow-y:auto;padding:8px 0">
-          <div style="padding:30px;text-align:center;color:rgba(255,255,255,0.3);font-size:13px">Escribí para buscar...</div>
-        </div>
-      </div>
-    </div>`;
-  bar.addEventListener('click', e => { if (e.target === bar) cerrarBusqueda(); });
-  document.body.appendChild(bar);
-  setTimeout(() => document.getElementById('search-input')?.focus(), 50);
-}
-
-function cerrarBusqueda() {
-  const bar = document.getElementById('global-search-bar');
-  if (bar) bar.remove();
-}
-
-document.addEventListener('keydown', e => {
-  if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); abrirBusqueda(); }
-  if (e.key === 'Escape') cerrarBusqueda();
-});
-
-function renderBusqueda(q) {
-  const res = document.getElementById('search-results');
-  if (!q || q.length < 2) { res.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:13px">Escribí para buscar...</div>'; return; }
-  q = q.toLowerCase();
-  const resultados = [];
-
-  // Buscar en ingresos
-  CACHE.ingresos.filter(r =>
-    r.nombre?.toLowerCase().includes(q) ||
-    r.concepto?.toLowerCase().includes(q) ||
-    String(r.monto).includes(q)
-  ).forEach(r => resultados.push({
-    tipo:'ingreso', icono:'💰', titulo:r.nombre||r.concepto,
-    sub:`${fmtFecha(r.fecha)} · ${r.concepto||''} · ${fmt(r.monto)}`,
-    accion:`showSection('ventas',document.querySelector('[onclick*=ventas]'))`
-  }));
-
-  // Buscar en gastos
-  CACHE.gastos.filter(r =>
-    r.concepto?.toLowerCase().includes(q) ||
-    r.categoria?.toLowerCase().includes(q) ||
-    String(r.monto).includes(q)
-  ).forEach(r => resultados.push({
-    tipo:'gasto', icono:'💸', titulo:r.concepto||r.categoria,
-    sub:`${fmtFecha(r.fecha)} · ${r.categoria} · ${fmt(r.monto)}`,
-    accion:`showSection('gastos',document.querySelector('[onclick*=gastos]'))`
-  }));
-
-  // Buscar en ventas/cuotas
-  const ventas = JSON.parse(localStorage.getItem('dash_ventas') || '[]');
-  ventas.filter(v =>
-    v.cliente?.toLowerCase().includes(q) ||
-    v.email?.toLowerCase().includes(q) ||
-    v.producto?.toLowerCase().includes(q) ||
-    v.telefono?.includes(q)
-  ).forEach(v => resultados.push({
-    tipo:'venta', icono:'🧾', titulo:v.cliente,
-    sub:`${v.producto||''} · ${fmt(v.total)} · ${v.cuotas.filter(c=>!c.pagada).length} cuota(s) pendiente(s)`,
-    accion:`showSection('cuotas',document.querySelector('[onclick*=cuotas]'))`
-  }));
-
-  // Buscar en suscripciones
-  CACHE.subs.filter(s =>
-    s.nombre?.toLowerCase().includes(q) ||
-    s.cuenta?.toLowerCase().includes(q)
-  ).forEach(s => resultados.push({
-    tipo:'sub', icono:s.emoji||'🔗', titulo:s.nombre,
-    sub:`${s.plan} · ${fmt(s.costo)}/mes · ${s.cuenta||''}`,
-    accion:`showSection('suscripciones',document.querySelector('[onclick*=suscripciones]'))`
-  }));
-
-  if (!resultados.length) {
-    res.innerHTML = `<div style="padding:30px;text-align:center;color:var(--muted);font-size:13px">Sin resultados para "${q}"</div>`;
-    return;
-  }
-
-  const tipoLabel = { ingreso:'Ingreso', gasto:'Gasto', venta:'Venta', sub:'Suscripción' };
-  const tipoTag   = { ingreso:'tag-green', gasto:'tag-red', venta:'tag-blue', sub:'tag-purple' };
-
-  res.innerHTML = resultados.slice(0,12).map(r => `
-    <div onclick="${r.accion};cerrarBusqueda()" style="display:flex;align-items:center;gap:12px;padding:12px 20px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.04);transition:background .1s" onmouseenter="this.style.background='rgba(255,255,255,0.04)'" onmouseleave="this.style.background=''">
-      <span style="font-size:20px">${r.icono}</span>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.titulo}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.sub}</div>
-      </div>
-      <span class="tag ${tipoTag[r.tipo]||'tag-gray'}" style="flex-shrink:0;font-size:9px">${tipoLabel[r.tipo]||r.tipo}</span>
-    </div>`).join('');
-}
-
-// ============================================================
-// NOTIFICACIONES BANNER
-// ============================================================
-function checkNotificaciones() {
-  const hoy  = new Date(); hoy.setHours(0,0,0,0);
-  const fin7  = new Date(hoy); fin7.setDate(fin7.getDate() + 7);
-  const msgs  = [];
-
-  const ventas = JSON.parse(localStorage.getItem('dash_ventas') || '[]');
-
-  // Cuotas vencidas
-  let vencidas = 0;
-  ventas.forEach(v => v.cuotas.forEach(c => {
-    if (!c.pagada && c.vence) {
-      const d = new Date(c.vence); d.setHours(0,0,0,0);
-      if (d < hoy) vencidas++;
-    }
-  }));
-  if (vencidas > 0) msgs.push(`🔴 ${vencidas} cuota${vencidas>1?'s':''} vencida${vencidas>1?'s':''} sin cobrar`);
-
-  // Cuotas próximos 7 días
-  let proximas = 0;
-  ventas.forEach(v => v.cuotas.forEach(c => {
-    if (!c.pagada && c.vence) {
-      const d = new Date(c.vence); d.setHours(0,0,0,0);
-      if (d >= hoy && d <= fin7) proximas++;
-    }
-  }));
-  if (proximas > 0) msgs.push(`⏰ ${proximas} cuota${proximas>1?'s':''} vence${proximas===1?'':'n'} esta semana`);
-
-  // Suscripciones próximos 7 días
-  const subsVencen = CACHE.subs.filter(s => {
-    if (!s.vence || s.ciclo==='gratis') return false;
-    const d = new Date(s.vence); d.setHours(0,0,0,0);
-    const diff = (d - hoy) / 86400000;
-    return diff >= 0 && diff <= 7;
-  });
-  if (subsVencen.length > 0) msgs.push(`🔗 ${subsVencen.length} suscripción${subsVencen.length>1?'es':''} vence${subsVencen.length===1?'':'n'} en 7 días`);
-
-  const banner = document.getElementById('notif-banner');
-  if (!banner) return;
-  if (msgs.length > 0) {
-    document.getElementById('notif-texto').innerHTML = msgs.join(' &nbsp;·&nbsp; ');
-    banner.style.display = 'flex';
-  } else {
-    banner.style.display = 'none';
-  }
-}
-
-// ============================================================
-// REPORTES POR VENDEDOR
-// ============================================================
-function renderReportes() {
-  const sel = document.getElementById('rep-period');
-  const [mes, anio] = (sel ? sel.value : '|').split('|');
-
-  let ingresos = CACHE.ingresos;
-  let gastos   = CACHE.gastos;
-  if (mes) {
-    ingresos = ingresos.filter(r => r.mes === mes && String(r.anio) === String(anio));
-    gastos   = gastos.filter(r => r.mes === mes && String(r.anio) === String(anio));
-  }
-
-  const ventas = JSON.parse(localStorage.getItem('dash_ventas') || '[]');
-  const vendedores = [...new Set(ingresos.map(r => r.vendedor).filter(Boolean))];
-
-  const totalIng = ingresos.reduce((s,r) => s + r.monto, 0);
-  const totalGas = gastos.reduce((s,r) => s + r.monto, 0);
-  const revenue  = totalIng - totalGas;
-
-  // Totales generales
-  const totDiv = document.getElementById('rep-totales');
-  if (totDiv) totDiv.innerHTML = `
-    <div class="metric-card m-blue"><div class="metric-label">Ingresos totales</div><div class="metric-value">${fmt(totalIng)}</div><div class="metric-hint">${mes||'Todos los períodos'}</div></div>
-    <div class="metric-card m-red"><div class="metric-label">Gastos totales</div><div class="metric-value">${fmt(totalGas)}</div></div>
-    <div class="metric-card m-green"><div class="metric-label">Revenue neto</div><div class="metric-value">${fmt(Math.max(0,revenue))}</div></div>
-    <div class="metric-card m-gold"><div class="metric-label">Vendedores activos</div><div class="metric-value">${vendedores.length}</div></div>`;
-
-  const repDiv = document.getElementById('rep-vendedores');
-  if (!repDiv) return;
-
-  if (!vendedores.length) {
-    repDiv.innerHTML = '<div class="empty">Sin datos de vendedores en el período</div>';
-    return;
-  }
-
-  repDiv.innerHTML = vendedores.map(vendedor => {
-    const ingVend = ingresos.filter(r => r.vendedor === vendedor);
-    const totalVend = ingVend.reduce((s,r) => s + r.monto, 0);
-    const ventasVend = ventas.filter(v => v.vendedor === vendedor);
-    const cuotasPend = ventasVend.reduce((s,v) => s + v.cuotas.filter(c=>!c.pagada).reduce((s2,c2)=>s2+c2.monto,0), 0);
-    const miembro = CACHE.equipo.find(m => m.nombre === vendedor);
-    let comision = 0;
-    if (miembro) {
-      if (miembro.tipo==='vendedor') comision = totalVend * (miembro.valor/100);
-      else if (miembro.tipo==='revenue_pct') comision = Math.max(0,revenue) * (miembro.valor/100);
-      else if (miembro.tipo==='fijo') comision = miembro.valor;
-    }
-    const pct = totalIng > 0 ? Math.round(totalVend/totalIng*100) : 0;
-
-    return `<div class="table-card" style="margin-bottom:16px">
-      <div class="table-head">
-        <div style="display:flex;align-items:center;gap:12px">
-          <div style="width:40px;height:40px;background:linear-gradient(135deg,#2563EB,#7c3aed);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px">${vendedor.charAt(0)}</div>
-          <div>
-            <div class="table-title">${vendedor}</div>
-            <div style="font-size:11px;color:var(--muted)">${miembro?.rol||'Vendedor'} · ${miembro?.tipo||'—'}</div>
-          </div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:20px;font-weight:700;color:var(--accent)">${fmt(totalVend)}</div>
-          <div style="font-size:11px;color:var(--muted)">${pct}% del total</div>
-        </div>
-      </div>
-      <div style="background:rgba(255,255,255,0.04);border-radius:4px;height:6px;margin:8px 0 16px">
-        <div style="background:linear-gradient(90deg,#2563EB,#00E5FF);height:100%;border-radius:4px;width:${pct}%;transition:width .3s"></div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
-        <div style="background:var(--surface);border-radius:var(--rsm);padding:10px 12px">
-          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Registros</div>
-          <div style="font-size:18px;font-weight:600">${ingVend.length}</div>
-        </div>
-        <div style="background:var(--surface);border-radius:var(--rsm);padding:10px 12px">
-          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Ventas activas</div>
-          <div style="font-size:18px;font-weight:600">${ventasVend.length}</div>
-        </div>
-        <div style="background:var(--surface);border-radius:var(--rsm);padding:10px 12px">
-          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Por cobrar</div>
-          <div style="font-size:18px;font-weight:600;color:var(--gold)">${fmt(cuotasPend)}</div>
-        </div>
-        <div style="background:var(--surface);border-radius:var(--rsm);padding:10px 12px">
-          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Comisión est.</div>
-          <div style="font-size:18px;font-weight:600;color:var(--green)">${fmt(comision)}</div>
-        </div>
-      </div>
-      <table class="data-table">
-        <thead><tr><th>Fecha</th><th>Cliente / Concepto</th><th style="text-align:right">Monto</th></tr></thead>
-        <tbody>${ingVend.slice(0,5).map(r=>`<tr>
-          <td style="color:var(--muted)">${fmtFecha(r.fecha)}</td>
-          <td>${r.nombre||r.concepto||'—'}<span style="font-size:10px;color:var(--muted)"> · ${r.concepto||''}</span></td>
-          <td style="text-align:right;font-weight:500;color:var(--green)">${fmt(r.monto)}</td>
-        </tr>`).join('')}
-        ${ingVend.length>5?`<tr><td colspan="3" style="text-align:center;color:var(--muted);font-size:12px">+${ingVend.length-5} registros más</td></tr>`:''}</tbody>
-      </table>
-    </div>`;
-  }).join('');
-}
-
-// ============================================================
-// SALDO DINÁMICO DE CUOTAS
-// ============================================================
-function calcularSaldoPendiente(venta) {
-  return venta.cuotas.filter(c => !c.pagada).reduce((s, c) => s + c.monto, 0);
 }
 
 // ============================================================
@@ -3593,45 +3151,26 @@ async function cargarDatosPrueba() {
 function showSection(name, btn) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  const sec = document.getElementById('section-'+name);
-  if (!sec) return;
-  sec.classList.add('active');
+  document.getElementById('section-'+name).classList.add('active');
   if (btn) btn.classList.add('active');
-  if (name==='tesoreria')      { const hoy=new Date().toISOString().split('T')[0]; const mf=document.getElementById('mov-fecha'); if(mf)mf.value=hoy; renderTesoreria(); }
-  if (name==='configuraciones') renderConfigInfo();
-  if (name==='reportes')       renderReportes();
-  if (name==='historial')      renderHistorial();
-}
-
-function openModal(name) {
-  const el = document.getElementById('modal-'+name);
-  if (!el) { console.warn('Modal no encontrado:', name); return; }
-  document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
-  el.classList.add('open');
-  el.style.display = 'flex'; // forzar visible en GHL
-}
-function closeModal(name) {
-  const el = document.getElementById('modal-'+name);
-  if (el) el.classList.remove('open');
-}
-
-// Registrar eventos DESPUÉS de que el DOM esté listo
-document.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll('.modal-overlay').forEach(o => {
-    o.addEventListener('click', e => { if (e.target===o) o.classList.remove('open'); });
-  });
-});
-
-// También registrar con delegación para mayor compatibilidad
-document.addEventListener('click', e => {
-  if (e.target && e.target.classList && e.target.classList.contains('modal-overlay')) {
-    e.target.classList.remove('open');
+  if (name==='tesoreria') {
+    const hoy = new Date().toISOString().split('T')[0];
+    const mf = document.getElementById('mov-fecha');
+    if (mf) mf.value = hoy;
+    renderTesoreria();
   }
+  if (name==='configuraciones') renderConfigInfo();
+}
+
+function openModal(name)  { document.getElementById('modal-'+name).classList.add('open'); }
+function closeModal(name) { document.getElementById('modal-'+name).classList.remove('open'); }
+
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target===o) o.classList.remove('open'); });
 });
 
 document.addEventListener('keydown', e => {
-  const ls = document.getElementById('login-screen');
-  if (e.key==='Enter' && ls && ls.style.display !== 'none') login();
+  if (e.key==='Enter' && document.getElementById('login-screen').style.display !== 'none') login();
   if (e.key==='Escape') document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
 });
 
