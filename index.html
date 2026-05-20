@@ -1997,6 +1997,7 @@ function renderCuotas() {
           </div>
           <div style="display:flex;gap:8px;align-items:center">
             <span class="tag tag-gold">${fmt(v.total)}</span>
+            ${saldoReal > 0 ? `<button class="btn-icon" onclick="pagarSaldo('${v.id}')" title="Pagar saldo pendiente" style="color:var(--red);border-color:rgba(231,76,60,0.4);padding:6px 12px;width:auto;font-size:11px;font-weight:600">Pagar $${Math.round(saldoReal)}</button>` : ''}
             <button class="btn-icon edit" onclick="agregarNotaVenta('${v.id}')" title="Notas">✎</button>
             <button class="btn-icon" onclick="generarReciboPDF('${v.id}')" title="Descargar recibo PDF" style="color:var(--accent);border-color:rgba(37,99,235,0.3)">⬇</button>
             <button class="btn-icon" onclick="eliminarVenta('${v.id}')" title="Eliminar">✕</button>
@@ -2069,6 +2070,33 @@ function confirmarCobro() {
   const ventas = JSON.parse(localStorage.getItem('dash_ventas') || '[]');
   const v = ventas.find(x => x.id === ventaId);
   if (!v) return;
+  
+  // Si es saldo residual (no es cuota específica)
+  if (cuotaIdx === -1) {
+    // Registrar como ingreso en el Sheet
+    api({ action:'addIngreso', nombre:v.cliente, fecha, concepto:`Saldo pendiente - ${v.producto||''} (${metodo})`, monto, vendedor:v.vendedor||'', esVenta:true }).then(res => {
+      if (res.ok) {
+        const d = parseFechaLocal(fecha);
+        CACHE.ingresos.unshift({ id:res.id, fecha, nombre:v.cliente, concepto:`Saldo pendiente - ${v.producto||''} (${metodo})`, monto, vendedor:v.vendedor||'', esVenta:true, mes:d.mes, anio:d.anio });
+        
+        // Registrar movimiento en tesorería si se eligió cuenta
+        if (cuentaId) {
+          const movs = getMovimientos();
+          movs.push({ id:'MOV_'+Date.now(), tipo:'entrada', fecha, cuentaId, cuentaDestId:'', desc:`Saldo pendiente - ${v.cliente}`, monto });
+          saveMovsLocal(movs);
+          renderTesoreria();
+        }
+        
+        renderIngresosFromCache();
+        renderDashboardFromCache();
+        renderCuotas();
+      }
+    });
+    closeModal('cobro');
+    showToast(`Saldo de ${fmt(monto)} cobrado ✓${cuentaId?' → '+getCuentas().find(ct=>ct.id===cuentaId)?.nombre:''}`, 'ok');
+    return;
+  }
+  
   const c = v.cuotas[cuotaIdx];
 
   // Calcular diferencia y redistribuir a la próxima cuota pendiente
@@ -3154,6 +3182,44 @@ async function cargarDatosPrueba() {
     '📊 El gráfico de línea de tiempo muestra los últimos 4 meses.'
   ), 500);
 }
+function pagarSaldo(ventaId) {
+  const ventas = JSON.parse(localStorage.getItem('dash_ventas') || '[]');
+  const v = ventas.find(x => x.id === ventaId);
+  if (!v) return;
+  
+  const cobradoEnCuotas = v.cuotas.filter(c => c.pagada).reduce((s,c) => s + (c.montoCobrado||c.monto), 0);
+  const saldo = Math.max(0, v.total - (v.adelanto||0) - cobradoEnCuotas);
+  
+  if (saldo <= 0) { showToast('No hay saldo pendiente','ok'); return; }
+  
+  // Abrir modal de cobro con el saldo total como monto
+  document.getElementById('cobro-venta-id').value = ventaId;
+  document.getElementById('cobro-cuota-idx').value = -1; // -1 = es saldo residual, no cuota específica
+  document.getElementById('cobro-title').textContent = `Pagar saldo pendiente — ${v.cliente}`;
+  document.getElementById('cobro-sub').textContent = `${v.producto||''} · Saldo a cobrar: ${fmt(saldo)}`;
+  document.getElementById('cobro-monto').value = saldo.toFixed(2);
+  document.getElementById('cobro-fecha').value = new Date().toISOString().split('T')[0];
+  document.getElementById('cobro-notas').value = '';
+  
+  const cuentas = getCuentas();
+  const ctaSel = document.getElementById('cobro-cuenta');
+  ctaSel.innerHTML = '<option value="">— No registrar en tesorería —</option>' +
+    cuentas.map(c => `<option value="${c.id}">${c.emoji||'💵'} ${c.nombre} (${c.moneda})</option>`).join('');
+  
+  if (v.metodoPago) {
+    const match = cuentas.find(c =>
+      (v.metodoPago==='PayPal' && c.nombre.toLowerCase().includes('paypal')) ||
+      (v.metodoPago==='Wise'   && c.nombre.toLowerCase().includes('wise'))   ||
+      (v.metodoPago==='Crypto' && c.tipo==='crypto') ||
+      (v.metodoPago==='Efectivo' && c.tipo==='efectivo' && c.moneda==='USD')
+    );
+    if (match) ctaSel.value = match.id;
+  }
+  
+  document.getElementById('cobro-metodo').value = v.metodoPago || 'Transferencia';
+  openModal('cobro');
+}
+
 function showSection(name, btn) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
