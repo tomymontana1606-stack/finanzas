@@ -529,10 +529,11 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
       <div class="page-header">
         <div><div class="page-title">Seguimiento de Cuotas</div><div class="page-sub">Estado de cobros pendientes</div></div>
       </div>
-      <div class="metrics-grid" style="grid-template-columns:repeat(3,1fr)">
+      <div class="metrics-grid" style="grid-template-columns:repeat(4,1fr)">
         <div class="metric-card m-gold"><div class="metric-label">Total por cobrar</div><div class="metric-value" id="cuota-total">—</div><div class="metric-hint">en cuotas activas</div></div>
         <div class="metric-card m-red"><div class="metric-label">Cuotas vencidas</div><div class="metric-value" id="cuota-vencidas">—</div><div class="metric-hint">sin cobrar</div></div>
         <div class="metric-card m-green"><div class="metric-label">Cuotas cobradas</div><div class="metric-value" id="cuota-cobradas">—</div><div class="metric-hint">este mes</div></div>
+        <div class="metric-card m-red"><div class="metric-label">Cuotas por vencer</div><div class="metric-value" id="cuota-por-vencer">—</div><div class="metric-hint">próximos 15 días</div></div>
       </div>
       <div id="ventas-cuotas-list"></div>
     </section>
