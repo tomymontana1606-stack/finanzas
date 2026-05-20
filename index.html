@@ -25,7 +25,7 @@
   --rsm:     8px;
   --font: -apple-system,'Segoe UI',sans-serif;
 }
-body { background:var(--bg); color:var(--text); font-family:var(--font); font-size:14px; min-height:100vh; line-height:1.5; }
+body { background:var(--bg); color:var(--text); font-family:var(--font); font-size:14px; min-height:100vh; line-height:1.5; transform:none; will-change:unset; }
 
 /* LOGIN */
 #login-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:24px; }
@@ -112,7 +112,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
 .actions-cell { display:flex; gap:5px; justify-content:flex-end; align-items:center; }
 
 /* MODAL */
-.modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:99999; padding:16px; pointer-events:none; }
+.modal-overlay { position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,.85); display:none; align-items:center; justify-content:center; z-index:99999; padding:16px; pointer-events:none; transform:none !important; }
 .modal-overlay.open { display:flex; pointer-events:auto; }
 .modal { background:var(--card); border:1px solid rgba(37,99,235,.2); border-radius:16px; padding:28px; width:100%; max-width:500px; max-height:92vh; overflow-y:auto; position:relative; z-index:100000; }
 .modal-title { font-size:16px; font-weight:500; margin-bottom:6px; }
