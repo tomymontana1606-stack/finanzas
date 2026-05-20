@@ -190,6 +190,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
 .btn-cuota-deshacer:hover { background:rgba(231,76,60,.15); }
 .cobro-info { font-size:10px; color:var(--muted); margin-top:2px; }
 .venta-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:18px; margin-bottom:12px; }
+.venta-card.pendiente { border-color:rgba(231,76,60,.5); border-width:2px; background:rgba(231,76,60,.04); }
 .venta-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
 .venta-cliente { font-size:15px; font-weight:500; }
 .venta-vendedor { font-size:11px; color:var(--muted); margin-top:2px; }
@@ -1988,10 +1989,10 @@ function renderCuotas() {
     }).join('');
     const notasHtml = v.notas ? `<div style="margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:6px;font-size:11px;color:var(--muted)">${v.notas}</div>` : '';
     return `
-      <div class="venta-card">
+      <div class="venta-card ${saldoReal > 0 ? 'pendiente' : ''}">
         <div class="venta-header">
           <div>
-            <div class="venta-cliente">${v.cliente}</div>
+            <div class="venta-cliente">${v.cliente}${saldoReal > 0 ? ' <span style="color:var(--red);font-size:11px;font-weight:600">⚠️ Saldo: '+fmt(saldoReal)+'</span>' : ''}</div>
             <div class="venta-vendedor">${v.producto||''}${v.vendedor?' · Vendedor: '+v.vendedor:''}</div>
           </div>
           <div style="display:flex;gap:8px;align-items:center">
