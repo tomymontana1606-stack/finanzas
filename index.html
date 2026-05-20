@@ -2075,8 +2075,26 @@ function confirmarCobro() {
   const v = ventas.find(x => x.id === ventaId);
   if (!v) return;
   
-  // Si es saldo residual (no es cuota específica)
+  // Si es saldo residual (cuotaIdx === -1), agregar como nueva cuota
   if (cuotaIdx === -1) {
+    // Agregar cuota de "Saldo pendiente"
+    const newCuota = {
+      num: v.nCuotas + 1,
+      monto: monto,
+      vencimiento: fecha,
+      pagada: true,
+      montoCobrado: monto,
+      transf: metodo,
+      notas: 'Saldo pendiente cobrado'
+    };
+    v.cuotas.push(newCuota);
+    v.nCuotas = v.cuotas.length;
+    
+    // Guardar cambios en ventas
+    const ventaIdx = ventas.findIndex(x => x.id === ventaId);
+    ventas[ventaIdx] = v;
+    localStorage.setItem('dash_ventas', JSON.stringify(ventas));
+    
     // Registrar como ingreso en el Sheet
     api({ action:'addIngreso', nombre:v.cliente, fecha, concepto:`Saldo pendiente - ${v.producto||''} (${metodo})`, monto, vendedor:v.vendedor||'', esVenta:true }).then(res => {
       if (res.ok) {
@@ -2097,7 +2115,7 @@ function confirmarCobro() {
       }
     });
     closeModal('cobro');
-    showToast(`Saldo de ${fmt(monto)} cobrado ✓${cuentaId?' → '+getCuentas().find(ct=>ct.id===cuentaId)?.nombre:''}`, 'ok');
+    showToast(`Saldo de ${fmt(monto)} agregado como nueva cuota ✓${cuentaId?' → '+getCuentas().find(ct=>ct.id===cuentaId)?.nombre:''}`, 'ok');
     return;
   }
   
