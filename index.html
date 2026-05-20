@@ -1992,7 +1992,15 @@ function renderCuotas() {
     }).join('');
     const notasHtml = v.notas ? `<div style="margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:6px;font-size:11px;color:var(--muted)">${v.notas}</div>` : '';
     return `
-      <div class="venta-card ${saldoReal > 0 ? 'pendiente' : ''}">
+      <div class="venta-card ${(() => {
+              const [d, m, y] = v.cuotas[0]?.vencimiento.split('/').map(Number) || [0,0,0];
+              const hoy = new Date();
+              const tieneVencidas = v.cuotas.some(c => {
+                const [dd, mm, yy] = c.vencimiento.split('/').map(Number);
+                return !c.pagada && new Date(yy, mm-1, dd) < hoy;
+              });
+              return (saldoReal > 0 || tieneVencidas) ? 'pendiente' : '';
+            })()}">
         <div class="venta-header">
           <div>
             <div class="venta-cliente">${v.cliente}${saldoReal > 0 ? ' <span style="color:var(--red);font-size:11px;font-weight:600">⚠️ Saldo: '+fmt(saldoReal)+'</span>' : ''}</div>
