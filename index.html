@@ -3183,41 +3183,47 @@ async function cargarDatosPrueba() {
   ), 500);
 }
 function pagarSaldo(ventaId) {
-  const ventas = JSON.parse(localStorage.getItem('dash_ventas') || '[]');
-  const v = ventas.find(x => x.id === ventaId);
-  if (!v) return;
-  
-  const cobradoEnCuotas = v.cuotas.filter(c => c.pagada).reduce((s,c) => s + (c.montoCobrado||c.monto), 0);
-  const saldo = Math.max(0, v.total - (v.adelanto||0) - cobradoEnCuotas);
-  
-  if (saldo <= 0) { showToast('No hay saldo pendiente','ok'); return; }
-  
-  // Abrir modal de cobro con el saldo total como monto
-  document.getElementById('cobro-venta-id').value = ventaId;
-  document.getElementById('cobro-cuota-idx').value = -1; // -1 = es saldo residual, no cuota específica
-  document.getElementById('cobro-title').textContent = `Pagar saldo pendiente — ${v.cliente}`;
-  document.getElementById('cobro-sub').textContent = `${v.producto||''} · Saldo a cobrar: ${fmt(saldo)}`;
-  document.getElementById('cobro-monto').value = saldo.toFixed(2);
-  document.getElementById('cobro-fecha').value = new Date().toISOString().split('T')[0];
-  document.getElementById('cobro-notas').value = '';
-  
-  const cuentas = getCuentas();
-  const ctaSel = document.getElementById('cobro-cuenta');
-  ctaSel.innerHTML = '<option value="">— No registrar en tesorería —</option>' +
-    cuentas.map(c => `<option value="${c.id}">${c.emoji||'💵'} ${c.nombre} (${c.moneda})</option>`).join('');
-  
-  if (v.metodoPago) {
-    const match = cuentas.find(c =>
-      (v.metodoPago==='PayPal' && c.nombre.toLowerCase().includes('paypal')) ||
-      (v.metodoPago==='Wise'   && c.nombre.toLowerCase().includes('wise'))   ||
-      (v.metodoPago==='Crypto' && c.tipo==='crypto') ||
-      (v.metodoPago==='Efectivo' && c.tipo==='efectivo' && c.moneda==='USD')
-    );
-    if (match) ctaSel.value = match.id;
+  try {
+    const ventas = JSON.parse(localStorage.getItem('dash_ventas') || '[]');
+    const v = ventas.find(x => x.id === ventaId);
+    if (!v) { showToast('Venta no encontrada','err'); return; }
+    
+    const cobradoEnCuotas = v.cuotas.filter(c => c.pagada).reduce((s,c) => s + (c.montoCobrado||c.monto), 0);
+    const saldo = Math.max(0, v.total - (v.adelanto||0) - cobradoEnCuotas);
+    
+    if (saldo <= 0) { showToast('No hay saldo pendiente','ok'); return; }
+    
+    // Llenar modal de cobro
+    document.getElementById('cobro-venta-id').value = ventaId;
+    document.getElementById('cobro-cuota-idx').value = -1;
+    document.getElementById('cobro-title').textContent = `Pagar saldo pendiente — ${v.cliente}`;
+    document.getElementById('cobro-sub').textContent = `${v.producto||''} · Saldo: ${fmt(saldo)}`;
+    document.getElementById('cobro-monto').value = saldo.toFixed(2);
+    document.getElementById('cobro-fecha').value = new Date().toISOString().split('T')[0];
+    document.getElementById('cobro-notas').value = '';
+    document.getElementById('cobro-metodo').value = v.metodoPago || 'Transferencia';
+    
+    const cuentas = getCuentas();
+    const ctaSel = document.getElementById('cobro-cuenta');
+    if (ctaSel) {
+      ctaSel.innerHTML = '<option value="">— No registrar en tesorería —</option>' +
+        cuentas.map(c => `<option value="${c.id}">${c.emoji||'💵'} ${c.nombre}</option>`).join('');
+      
+      if (v.metodoPago && cuentas.length) {
+        const match = cuentas.find(c =>
+          (v.metodoPago==='PayPal' && c.nombre.toLowerCase().includes('paypal')) ||
+          (v.metodoPago==='Wise' && c.nombre.toLowerCase().includes('wise')) ||
+          (v.metodoPago==='Crypto' && c.tipo==='crypto')
+        );
+        if (match) ctaSel.value = match.id;
+      }
+    }
+    
+    openModal('cobro');
+  } catch(e) {
+    console.error('Error en pagarSaldo:', e);
+    showToast('Error al abrir el modal','err');
   }
-  
-  document.getElementById('cobro-metodo').value = v.metodoPago || 'Transferencia';
-  openModal('cobro');
 }
 
 function showSection(name, btn) {
