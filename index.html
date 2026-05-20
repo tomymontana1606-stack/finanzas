@@ -1997,7 +1997,11 @@ function renderCuotas() {
           </div>
           <div style="display:flex;gap:8px;align-items:center">
             <span class="tag tag-gold">${fmt(v.total)}</span>
-            ${saldoReal > 0 ? `<button class="btn-icon" onclick="pagarSaldo('${v.id}')" title="Pagar saldo pendiente" style="color:var(--red);border-color:rgba(231,76,60,0.4);padding:6px 12px;width:auto;font-size:11px;font-weight:600">Pagar $${Math.round(saldoReal)}</button>` : ''}
+            ${(() => {
+              const cobradoEnCuotas = v.cuotas.filter(c => c.pagada).reduce((s,c) => s + (c.montoCobrado||c.monto), 0);
+              const saldoReal = Math.max(0, v.total - (v.adelanto||0) - cobradoEnCuotas);
+              return saldoReal > 0 ? `<button class="btn-icon" onclick="pagarSaldo('${v.id}')" title="Pagar saldo pendiente" style="color:var(--red);border-color:rgba(231,76,60,0.4);padding:6px 12px;width:auto;font-size:11px;font-weight:600">Pagar $${Math.round(saldoReal)}</button>` : '';
+            })()}
             <button class="btn-icon edit" onclick="agregarNotaVenta('${v.id}')" title="Notas">✎</button>
             <button class="btn-icon" onclick="generarReciboPDF('${v.id}')" title="Descargar recibo PDF" style="color:var(--accent);border-color:rgba(37,99,235,0.3)">⬇</button>
             <button class="btn-icon" onclick="eliminarVenta('${v.id}')" title="Eliminar">✕</button>
