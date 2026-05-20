@@ -126,9 +126,9 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
 .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 .form-row-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
 .modal-actions { display:flex; gap:10px; margin-top:20px; justify-content:flex-end; }
-.btn-cancel { background:none; border:1px solid var(--border); color:var(--muted); border-radius:var(--rsm); font-size:13px; padding:9px 18px; cursor:pointer; }
+.btn-cancel { background:none; border:1px solid var(--border); color:var(--muted); border-radius:var(--rsm); font-size:13px; padding:9px 18px; cursor:pointer; pointer-events:auto; }
 .btn-cancel:hover { border-color:var(--muted); color:var(--text); }
-.btn-save { background:var(--accent); color:#fff; border:none; border-radius:var(--rsm); font-size:13px; font-weight:500; padding:9px 22px; cursor:pointer; }
+.btn-save { background:var(--accent); color:#fff; border:none; border-radius:var(--rsm); font-size:13px; font-weight:500; padding:9px 22px; cursor:pointer; pointer-events:auto; }
 .btn-save:hover { opacity:.85; }
 .divider-label { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--border); padding-bottom:8px; margin:18px 0 14px; }
 .form-hint { font-size:11px; color:var(--muted); margin-top:4px; }
