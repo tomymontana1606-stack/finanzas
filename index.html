@@ -3140,9 +3140,12 @@ function limpiarDatosPrueba() {
 }
 
 async function cargarDatosPrueba() {
-  const hayDatos = CACHE.ingresos.length > 0 || CACHE.gastos.length > 0 || JSON.parse(localStorage.getItem('dash_ventas')||'[]').length > 0;
-  if (hayDatos) {
-    if (!confirm('Ya hay datos. ¿Reemplazar con el escenario de prueba?')) return;
+  if (!confirm('¿Cargar escenario de prueba $155k?\nEsto borrará todos los datos actuales (locales y del Sheet).')) return;
+  
+  showToast('🧹 Limpiando datos anteriores...','ok');
+  
+  // Limpiar Sheet primero
+  try {
     const [rIng, rGas, rEq] = await Promise.all([
       api({ action:'getIngresos', mes:'', anio:'' }),
       api({ action:'getGastos',   mes:'', anio:'' }),
@@ -3153,10 +3156,13 @@ async function cargarDatosPrueba() {
       ...(rGas.data||[]).map(r => api({ action:'deleteGasto',   id:r.id })),
       ...(rEq.data||[]).map(r => api({ action:'deleteMiembro',  id:r.id })),
     ]);
-    localStorage.clear();
-  }
-
-  showToast('Cargando escenario Top Realtors — $155k mes...','ok');
+  } catch(e) { console.warn('Error limpiando Sheet:', e); }
+  
+  // Limpiar localStorage
+  localStorage.clear();
+  CACHE.ingresos = []; CACHE.gastos = []; CACHE.equipo = []; CACHE.subs = []; CACHE.ventas = [];
+  
+  showToast('📦 Cargando escenario $155k...','ok');
 
   const now = new Date();
   const fd = (y,m,d) => `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
