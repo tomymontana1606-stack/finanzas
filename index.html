@@ -474,7 +474,31 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
       </div>
       <div class="charts-row" style="margin-bottom:20px">
         <div class="chart-card"><div class="chart-title">Gastos por categoría</div><div style="position:relative;height:200px"><canvas id="chart-gastos" role="img" aria-label="Gastos por categoría"></canvas></div></div>
-        <div class="chart-card"><div class="chart-title">Distribución financiera</div><div style="position:relative;height:200px"><canvas id="chart-donut" role="img" aria-label="Distribución"></canvas></div></div>
+        <div class="chart-card" id="dash-cuotas-resumen">
+          <div class="chart-title">Cuotas a cobrar</div>
+          <div id="dash-cuotas-stats" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
+            <div style="background:var(--surface);border-radius:10px;padding:14px;border-left:3px solid var(--gold)">
+              <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Total pendiente</div>
+              <div id="dcs-total" style="font-size:22px;font-weight:700;color:var(--gold);margin-top:4px">—</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px">en cuotas activas</div>
+            </div>
+            <div style="background:var(--surface);border-radius:10px;padding:14px;border-left:3px solid var(--red)">
+              <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Vencidas</div>
+              <div id="dcs-vencidas" style="font-size:22px;font-weight:700;color:var(--red);margin-top:4px">—</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px">sin cobrar</div>
+            </div>
+            <div style="background:var(--surface);border-radius:10px;padding:14px;border-left:3px solid #FF9500">
+              <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Próximo mes</div>
+              <div id="dcs-proximo" style="font-size:22px;font-weight:700;color:#FF9500;margin-top:4px">—</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px">por vencer</div>
+            </div>
+            <div style="background:var(--surface);border-radius:10px;padding:14px;border-left:3px solid var(--green)">
+              <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Cobradas este mes</div>
+              <div id="dcs-cobradas" style="font-size:22px;font-weight:700;color:var(--green);margin-top:4px">—</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px">cuotas pagadas</div>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="table-card">
         <div class="table-head"><div class="table-title">Comisiones del equipo</div></div>
@@ -1692,17 +1716,39 @@ function renderChartGastos(porCat) {
   });
 }
 
-function renderChartDonut(ing, gas, rev) {
-  if (charts.donut) charts.donut.destroy();
-  charts.donut = new Chart(document.getElementById('chart-donut'), {
-    type:'doughnut',
-    data:{ labels:['Ingresos','Gastos','Revenue'], datasets:[{ data:[ing,gas,rev], backgroundColor:['#F7C948','#E74C3C','#2ECC71'], borderColor:'#161616', borderWidth:3, hoverOffset:6 }] },
-    options:{ responsive:true, maintainAspectRatio:false, cutout:'65%',
-      plugins:{ legend:{ position:'bottom', labels:{color:'rgba(255,255,255,0.5)',font:{size:11},padding:16,usePointStyle:true,pointStyleWidth:8} },
-        tooltip:{callbacks:{label:ctx=>' '+fmt(ctx.raw)}}
+function renderChartDonut() {
+  // Reemplazado por widget de cuotas — actualizar stats
+  const ventas = JSON.parse(localStorage.getItem('dash_ventas') || '[]');
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const finMes = new Date(hoy.getFullYear(), hoy.getMonth()+2, 0);
+  let total = 0, vencidas = 0, proximo = 0, cobradas = 0;
+  const mesActual = hoy.getMonth(), anioActual = hoy.getFullYear();
+  ventas.forEach(v => {
+    const cobradoEnCuotas = (v.cuotas||[]).filter(c=>c.pagada).reduce((s,c)=>s+(c.montoCobrado||c.monto),0);
+    const saldoReal = Math.max(0, v.total - (v.adelanto||0) - cobradoEnCuotas);
+    total += saldoReal;
+    (v.cuotas||[]).forEach(c => {
+      if (c.pagada) {
+        if (c.fechaCobro) {
+          const fc = new Date(c.fechaCobro+'T00:00:00');
+          if (fc.getMonth()===mesActual && fc.getFullYear()===anioActual) cobradas++;
+        }
+      } else if (c.vence) {
+        const pts = c.vence.split('/');
+        if (pts.length===3) {
+          const [d,m,y] = pts.map(Number);
+          const vd = new Date(y,m-1,d); vd.setHours(0,0,0,0);
+          if (vd < hoy) vencidas++;
+          else if (vd <= finMes) proximo++;
+        }
       }
-    }
+    });
   });
+  const el = id => document.getElementById(id);
+  if (el('dcs-total'))    el('dcs-total').textContent    = fmt(total);
+  if (el('dcs-vencidas')) el('dcs-vencidas').textContent = vencidas;
+  if (el('dcs-proximo'))  el('dcs-proximo').textContent  = proximo;
+  if (el('dcs-cobradas')) el('dcs-cobradas').textContent = cobradas;
 }
 
 // ============================================================
