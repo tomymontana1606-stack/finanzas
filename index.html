@@ -1118,7 +1118,8 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
       <select class="form-select" id="mie-tipo" onchange="toggleTipoMiembro()">
         <option value="porcentaje">% sobre ingresos totales</option>
         <option value="revenue_pct">% sobre revenue neto (ganancia)</option>
-          <option value="vendedor">% solo sobre sus ventas</option>
+        <option value="vendedor">% sobre lo cobrado de sus ventas (cuotas + seña)</option>
+        <option value="vendedor_total">% sobre el ticket total de sus ventas</option>
         <option value="fijo">Monto fijo ($)</option>
         <option value="restante">Socio — se lleva el restante</option>
       </select>
@@ -1149,7 +1150,8 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
       <select class="form-select" id="em-tipo" onchange="toggleTipoEditMiembro()">
         <option value="porcentaje">% sobre ingresos totales</option>
         <option value="revenue_pct">% sobre revenue neto (ganancia)</option>
-          <option value="vendedor">% solo sobre sus ventas</option>
+        <option value="vendedor">% sobre lo cobrado de sus ventas (cuotas + seña)</option>
+        <option value="vendedor_total">% sobre el ticket total de sus ventas</option>
         <option value="fijo">Monto fijo ($)</option>
         <option value="restante">Socio — se lleva el restante</option>
       </select>
@@ -1292,10 +1294,10 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
 // ============================================================
 // CONFIG
 // ============================================================
-const API_URL = 'https://script.google.com/macros/s/AKfycby8HarjoDseXYtV5dfsh-_nCVUt_VVMeB7zjQNinpOsV9qr9BoUt8IOLb3UwN5XmmvHzA/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxTD5XLPSS2pmJXLJ16MRYyUx8Q31Ewo81HmbBd9_77x88kM12akiKfEItebw-KUQxqJw/exec';
 
 let TOKEN = localStorage.getItem('dash_token') || '';
-let CACHE = { ingresos:[], gastos:[], equipo:[], subs:[], ventas:[] };
+let CACHE = { ingresos:[], gastos:[], equipo:[], subs:[], ventas:[], cuentas:[], movimientos:[] };
 let charts = {};
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
@@ -1451,10 +1453,22 @@ function renderDashboardFromCache() {
       base = `${m.valor}% del revenue neto`;
       baseVal = fmt(Math.max(0, revenue));
     } else if (m.tipo === 'vendedor') {
+      // Comisiona solo sobre lo que efectivamente ingresó (adelantos + cuotas cobradas)
       const susVentas = ingresos.filter(r => r.vendedor === m.nombre).reduce((s,r) => s+r.monto, 0);
       comision = susVentas * (m.valor/100);
-      base = `${m.valor}% de sus ventas`;
+      base = `${m.valor}% sobre lo cobrado de sus ventas`;
       baseVal = fmt(susVentas);
+    } else if (m.tipo === 'vendedor_total') {
+      // Comisiona sobre el ticket total de las ventas que cerró este período
+      const ventasLocal = JSON.parse(localStorage.getItem('dash_ventas') || '[]');
+      const susTickets = ventasLocal.filter(v => v.vendedor === m.nombre && v.fecha).filter(v => {
+        const d = new Date(v.fecha+'T00:00:00');
+        const MESES_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+        return MESES_ES[d.getMonth()] === mes && d.getFullYear() == anio;
+      }).reduce((s,v) => s+(v.total||0), 0);
+      comision = susTickets * (m.valor/100);
+      base = `${m.valor}% sobre ticket total de sus ventas`;
+      baseVal = fmt(susTickets);
     } else if (m.tipo === 'fijo') {
       comision = m.valor;
       base = 'Monto fijo';
@@ -1830,14 +1844,19 @@ function matchCuentaByMetodo(metodoPago) {
   }) || null;
 }
 
-function registrarEnTesoreria(cuentaId, fecha, desc, monto) {
+async function registrarEnTesoreria(cuentaId, fecha, desc, monto) {
   if (!cuentaId || !monto) return;
-  const movs = getMovimientos();
-  movs.push({ id:'MOV_'+Date.now(), tipo:'entrada', fecha, cuentaId, cuentaDestId:'', desc, monto });
-  saveMovsLocal(movs);
-  renderTesoreria();
-  const cuenta = getCuentas().find(c => c.id === cuentaId);
-  showToast(`Registrado en ${cuenta?.nombre||'tesorería'} ✓`, 'ok');
+  try {
+    const res = await api({ action: 'addMovimiento', tipo: 'entrada', fecha, cuentaId, cuentaDestId: '', desc, monto });
+    if (res.ok) {
+      CACHE.movimientos.push({ id: res.id, tipo: 'entrada', fecha, cuentaId, cuentaDestId: '', desc, monto });
+      renderTesoreria();
+      const cuenta = CACHE.cuentas.find(c => c.id === cuentaId);
+      showToast(`Registrado en ${cuenta?.nombre||'tesorería'} ✓`, 'ok');
+    }
+  } catch(e) {
+    console.error('Error registrando en tesorería:', e);
+  }
 }
 
 async function saveVenta() {
@@ -2622,7 +2641,7 @@ function toggleTipoMiembro(prefix='mie') {
     fijo:        'Monto fijo independiente de los ingresos',
     restante:    'Se lleva lo que queda del revenue después de pagar al resto del equipo'
   };
-  const labels = { porcentaje:'Porcentaje (%)', revenue_pct:'% del revenue neto', vendedor:'Porcentaje sobre sus ventas (%)', fijo:'Monto fijo ($)', restante:'—' };
+  const labels = { porcentaje:'Porcentaje (%)', revenue_pct:'% del revenue neto', vendedor:'% sobre lo cobrado (%)', vendedor_total:'% sobre ticket total (%)', fijo:'Monto fijo ($)', restante:'—' };
   wrap.style.display = tipo === 'restante' ? 'none' : 'block';
   if (label) label.textContent = labels[tipo] || '%';
   if (hint)  hint.textContent  = hints[tipo]  || '';
@@ -2637,8 +2656,8 @@ function renderEquipo() {
     return;
   }
   const colors  = ['#2563EB','#F7C948','#2ECC71','#8B5CF6','#F97316','#E74C3C'];
-  const tipoBadge = { porcentaje:'tag-blue', revenue_pct:'tag-orange', vendedor:'tag-purple', fijo:'tag-gold', restante:'tag-green' };
-  const tipoLabel = { porcentaje:'% total', revenue_pct:'% ganancia', vendedor:'% sus ventas', fijo:'Fijo', restante:'Socio' };
+  const tipoBadge = { porcentaje:'tag-blue', revenue_pct:'tag-orange', vendedor:'tag-purple', vendedor_total:'tag-pink', fijo:'tag-gold', restante:'tag-green' };
+  const tipoLabel = { porcentaje:'% total', revenue_pct:'% ganancia', vendedor:'% cobrado', vendedor_total:'% ticket', fijo:'Fijo', restante:'Socio' };
 
   grid.innerHTML = CACHE.equipo.map((m,i) => {
     const valLabel = m.tipo==='restante' ? 'Restante' : m.tipo==='fijo' ? fmt(m.valor) : m.valor+'%';
@@ -2902,10 +2921,22 @@ function actualizarInfoTasa() {
   const sidebarVal = document.getElementById('sidebar-tasa-val');
   if (sidebarVal) sidebarVal.textContent = tasa.toLocaleString('es-AR');
 }
-function getCuentas()       { return JSON.parse(localStorage.getItem('tesoreria_cuentas') || '[]'); }
-function getMovimientos()   { return JSON.parse(localStorage.getItem('tesoreria_movs') || '[]'); }
-function saveCuentasLocal(d){ localStorage.setItem('tesoreria_cuentas', JSON.stringify(d)); }
-function saveMovsLocal(d)   { localStorage.setItem('tesoreria_movs', JSON.stringify(d)); }
+function getCuentas()       { return CACHE.cuentas || []; }
+function getMovimientos()   { return CACHE.movimientos || []; }
+async function loadTesoreriaFromSheet() {
+  try {
+    const [rCtas, rMovs] = await Promise.all([
+      api({ action: 'getCuentas' }),
+      api({ action: 'getMovimientos' })
+    ]);
+    CACHE.cuentas = rCtas.data || [];
+    CACHE.movimientos = rMovs.data || [];
+  } catch(e) {
+    console.error('Error cargando tesorería:', e);
+    CACHE.cuentas = [];
+    CACHE.movimientos = [];
+  }
+}
 
 function renderTesoreria() {
   const cuentas = getCuentas();
@@ -3035,35 +3066,49 @@ function toggleMovTipo() {
   document.getElementById('mov-cuenta-dest-wrap').style.display = tipo==='transferencia' ? 'block' : 'none';
 }
 
-function saveCuenta() {
+async function saveCuenta() {
   const nombre = document.getElementById('cta-nombre').value.trim();
   if (!nombre) { showToast('Ingresá el nombre','err'); return; }
   const c = {
-    id: 'CTA'+Date.now(), nombre,
+    nombre,
     emoji:  document.getElementById('cta-emoji').value.trim() || '💵',
     tipo:   document.getElementById('cta-tipo').value,
     moneda: document.getElementById('cta-moneda').value,
     saldoInicial: parseFloat(document.getElementById('cta-saldo').value) || 0,
     desc:   document.getElementById('cta-desc').value.trim()
   };
-  const cuentas = getCuentas();
-  cuentas.push(c);
-  saveCuentasLocal(cuentas);
-  renderTesoreria();
-  showToast('Cuenta agregada ✓','ok');
-  closeModal('cuenta');
-  clearForm(['cta-nombre','cta-emoji','cta-saldo','cta-desc']);
+  try {
+    const res = await api({ action: 'addCuenta', ...c });
+    if (res.ok) {
+      CACHE.cuentas.push({ ...c, id: res.id });
+      renderTesoreria();
+      showToast('Cuenta agregada ✓','ok');
+      closeModal('cuenta');
+      clearForm(['cta-nombre','cta-emoji','cta-saldo','cta-desc']);
+    } else {
+      showToast('Error al guardar','err');
+    }
+  } catch(e) {
+    showToast('Error de conexión','err');
+  }
 }
 
-function deleteCuenta(id) {
+async function deleteCuenta(id) {
   if (!confirm('¿Eliminar esta cuenta? Se perderán los movimientos asociados.')) return;
-  saveCuentasLocal(getCuentas().filter(c=>c.id!==id));
-  saveMovsLocal(getMovimientos().filter(m=>m.cuentaId!==id && m.cuentaDestId!==id));
-  renderTesoreria();
-  showToast('Cuenta eliminada','ok');
+  try {
+    const res = await api({ action: 'deleteCuenta', id });
+    if (res.ok) {
+      CACHE.cuentas = CACHE.cuentas.filter(c => c.id !== id);
+      CACHE.movimientos = CACHE.movimientos.filter(m => m.cuentaId !== id && m.cuentaDestId !== id);
+      renderTesoreria();
+      showToast('Cuenta eliminada','ok');
+    }
+  } catch(e) {
+    showToast('Error al eliminar','err');
+  }
 }
 
-function saveMovimiento() {
+async function saveMovimiento() {
   const tipo       = document.getElementById('mov-tipo').value;
   const fecha      = document.getElementById('mov-fecha').value;
   const cuentaId   = document.getElementById('mov-cuenta').value;
@@ -3072,20 +3117,32 @@ function saveMovimiento() {
   const monto      = parseFloat(document.getElementById('mov-monto').value);
   if (!monto || !cuentaId) { showToast('Completá los campos requeridos','err'); return; }
   if (tipo==='transferencia' && cuentaId===cuentaDestId) { showToast('Las cuentas deben ser diferentes','err'); return; }
-  const movs = getMovimientos();
-  movs.push({ id:'MOV'+Date.now(), tipo, fecha, cuentaId, cuentaDestId, desc, monto });
-  saveMovsLocal(movs);
-  renderTesoreria();
-  showToast('Movimiento registrado ✓','ok');
-  closeModal('movimiento');
-  clearForm(['mov-desc','mov-monto']);
+  try {
+    const res = await api({ action: 'addMovimiento', tipo, fecha, cuentaId, cuentaDestId, desc, monto });
+    if (res.ok) {
+      CACHE.movimientos.push({ id: res.id, tipo, fecha, cuentaId, cuentaDestId, desc, monto });
+      renderTesoreria();
+      showToast('Movimiento registrado ✓','ok');
+      closeModal('movimiento');
+      clearForm(['mov-desc','mov-monto']);
+    }
+  } catch(e) {
+    showToast('Error al guardar','err');
+  }
 }
 
-function deleteMovimiento(id) {
+async function deleteMovimiento(id) {
   if (!confirm('¿Eliminar este movimiento?')) return;
-  saveMovsLocal(getMovimientos().filter(m=>m.id!==id));
-  renderTesoreria();
-  showToast('Eliminado','ok');
+  try {
+    const res = await api({ action: 'deleteMovimiento', id });
+    if (res.ok) {
+      CACHE.movimientos = CACHE.movimientos.filter(m => m.id !== id);
+      renderTesoreria();
+      showToast('Eliminado','ok');
+    }
+  } catch(e) {
+    showToast('Error al eliminar','err');
+  }
 }
 
 // ============================================================
@@ -3451,7 +3508,9 @@ async function cargarDatosPrueba() {
     { id:'CTA005', nombre:'Tarjeta empresa',emoji:'💳', tipo:'tarjeta',   moneda:'USD', saldo:0 },
     { id:'CTA006', nombre:'Crypto USDT',    emoji:'₿',  tipo:'crypto',    moneda:'USDT', saldo:0 },
   ];
-  localStorage.setItem('tesoreria_cuentas', JSON.stringify(cuentas));
+  // Cargar cuentas en Sheet
+  const ctasRes = await Promise.all(cuentas.map(c => api({ action: 'addCuenta', ...c })));
+  CACHE.cuentas = cuentas.map((c,i) => ({ ...c, id: ctasRes[i].id }));
 
   const movs = [
     // Entradas mes actual
@@ -3477,7 +3536,9 @@ async function cargarDatosPrueba() {
     // Transferencias internas
     { id:'MOV030', tipo:'transferencia', fecha:fd(y,m,6), cuentaId:'CTA001', cuentaDestId:'CTA004', desc:'Retiro efectivo Frank', monto:3000 },
   ];
-  localStorage.setItem('tesoreria_movs', JSON.stringify(movs));
+  // Cargar movimientos en Sheet
+  const movsRes = await Promise.all(movs.map(m => api({ action: 'addMovimiento', ...m })));
+  CACHE.movimientos = movs.map((m,i) => ({ ...m, id: movsRes[i].id }));
 
   // Tasa de cambio
   localStorage.setItem('ars_usd_tasa', '1200');
