@@ -856,8 +856,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
       <label class="form-label">¿Quién pagó?</label>
       <select class="form-select" id="gas-pagador">
         <option value="">— Seleccioná —</option>
-        <option>Frank</option><option>Tomas</option><option>Eveling</option>
-        <option>Ramiro</option><option>Juanma</option><option>Empresa</option>
+        <option value="">— Seleccioná —</option>
       </select>
     </div>
     <div class="modal-actions">
@@ -901,8 +900,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
       <label class="form-label">¿Quién pagó?</label>
       <select class="form-select" id="eg-pagador">
         <option value="">— Seleccioná —</option>
-        <option>Frank</option><option>Tomas</option><option>Eveling</option>
-        <option>Ramiro</option><option>Juanma</option><option>Empresa</option>
+        <option value="">— Seleccioná —</option>
       </select>
     </div>
     <div class="modal-actions">
@@ -954,8 +952,6 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
         <label class="form-label">¿Quién paga?</label>
         <select class="form-select" id="sub-pagador">
           <option value="">— Seleccioná —</option>
-          <option>Frank</option><option>Tomas</option><option>Eveling</option>
-          <option>Ramiro</option><option>Juanma</option><option>Empresa</option>
         </select>
       </div>
       <div class="form-group">
@@ -1019,8 +1015,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
         <label class="form-label">¿Quién paga?</label>
         <select class="form-select" id="es-pagador">
           <option value="">— Seleccioná —</option>
-          <option>Frank</option><option>Tomas</option><option>Eveling</option>
-          <option>Ramiro</option><option>Juanma</option><option>Empresa</option>
+          <option value="">— Seleccioná —</option>
         </select>
       </div>
       <div class="form-group">
@@ -3047,8 +3042,7 @@ async function cargarDatosPrueba() {
     { nombre:'Frank',   rol:'CEO / Experto',  tipo:'restante',    valor:0  },
     { nombre:'Tomas',   rol:'Integrador',     tipo:'revenue_pct', valor:15 },
     { nombre:'Eveling', rol:'Closer',         tipo:'vendedor',    valor:10 },
-    { nombre:'Ramiro',  rol:'Traficker',      tipo:'fijo',        valor:500 },
-    { nombre:'Juanma',  rol:'Funneler',       tipo:'fijo',        valor:500 },
+
   ];
   const eqRes = await Promise.all(equipoData.map(m2 => api({ action:'addMiembro', ...m2, activo:true })));
   CACHE.equipo = equipoData.map((m2,i) => ({ ...m2, id:eqRes[i].id, activo:true }));
@@ -3094,30 +3088,26 @@ async function cargarDatosPrueba() {
     // MES -3
     { categoria:'ADS', concepto:'Meta Ads campaña leads',   monto:2200, fecha:fd(py3,pm3,1) },
     { categoria:'ADS', concepto:'Google Ads remarketing',   monto:800,  fecha:fd(py3,pm3,1) },
-    { categoria:'Equipo', concepto:'Ramiro - Traficker',    monto:500,  fecha:fd(py3,pm3,5) },
-    { categoria:'Equipo', concepto:'Juanma - Funneler',     monto:500,  fecha:fd(py3,pm3,5) },
+
     { categoria:'Herramientas', concepto:'GoHighLevel Pro', monto:297,  fecha:fd(py3,pm3,1) },
     { categoria:'Herramientas', concepto:'Bunny CDN video', monto:20,   fecha:fd(py3,pm3,1) },
     // MES -2
     { categoria:'ADS', concepto:'Meta Ads campaña leads',   monto:2800, fecha:fd(py2,pm2,1) },
     { categoria:'ADS', concepto:'Google Ads - search',      monto:950,  fecha:fd(py2,pm2,1) },
-    { categoria:'Equipo', concepto:'Ramiro - Traficker',    monto:500,  fecha:fd(py2,pm2,5) },
-    { categoria:'Equipo', concepto:'Juanma - Funneler',     monto:500,  fecha:fd(py2,pm2,5) },
+
     { categoria:'Herramientas', concepto:'GoHighLevel Pro', monto:297,  fecha:fd(py2,pm2,1) },
     { categoria:'Herramientas', concepto:'Canva Pro anual', monto:130,  fecha:fd(py2,pm2,3) },
     { categoria:'Herramientas', concepto:'ChatGPT Plus',    monto:20,   fecha:fd(py2,pm2,3) },
     // MES -1
     { categoria:'ADS', concepto:'Meta Ads escala',          monto:3500, fecha:fd(py1,pm1,1) },
     { categoria:'ADS', concepto:'Google Ads - search',      monto:1100, fecha:fd(py1,pm1,1) },
-    { categoria:'Equipo', concepto:'Ramiro - Traficker',    monto:500,  fecha:fd(py1,pm1,5) },
-    { categoria:'Equipo', concepto:'Juanma - Funneler',     monto:500,  fecha:fd(py1,pm1,5) },
+
     { categoria:'Herramientas', concepto:'GoHighLevel Pro', monto:297,  fecha:fd(py1,pm1,1) },
     { categoria:'Herramientas', concepto:'Bunny CDN video', monto:20,   fecha:fd(py1,pm1,1) },
     // MES ACTUAL
     { categoria:'ADS', concepto:'Meta Ads - mayo',          monto:3200, fecha:fd(y,m,1) },
     { categoria:'ADS', concepto:'Google Ads - mayo',        monto:900,  fecha:fd(y,m,1) },
-    { categoria:'Equipo', concepto:'Ramiro - Traficker',    monto:500,  fecha:fd(y,m,5) },
-    { categoria:'Equipo', concepto:'Juanma - Funneler',     monto:500,  fecha:fd(y,m,5) },
+
     { categoria:'Herramientas', concepto:'GoHighLevel Pro', monto:297,  fecha:fd(y,m,1) },
     { categoria:'Herramientas', concepto:'Bunny CDN video', monto:20,   fecha:fd(y,m,1) },
     { categoria:'Herramientas', concepto:'ChatGPT Plus',    monto:20,   fecha:fd(y,m,1) },
@@ -3202,7 +3192,7 @@ async function cargarDatosPrueba() {
     { id:'M002', tipo:'entrada',       fecha:fd(y,m,5),  cuentaId:'CTA003', cuentaDestId:'',    desc:'Brian Cooper - adelanto Opción 1',      monto:1499 },
     { id:'M003', tipo:'salida',        fecha:fd(y,m,1),  cuentaId:'CTA002', cuentaDestId:'',    desc:'Meta Ads - pago campaña mayo',          monto:3200 },
     { id:'M004', tipo:'salida',        fecha:fd(y,m,1),  cuentaId:'CTA003', cuentaDestId:'',    desc:'Google Ads - mayo',                     monto:900  },
-    { id:'M005', tipo:'salida',        fecha:fd(y,m,5),  cuentaId:'CTA002', cuentaDestId:'',    desc:'Ramiro + Juanma sueldos mayo',          monto:1000 },
+    
     { id:'M006', tipo:'salida',        fecha:fd(y,m,1),  cuentaId:'CTA003', cuentaDestId:'',    desc:'GoHighLevel mensual',                   monto:297  },
     { id:'M007', tipo:'transferencia', fecha:fd(y,m,8),  cuentaId:'CTA003', cuentaDestId:'CTA002', desc:'PayPal → Wise (consolidación)',      monto:5000 },
     { id:'M008', tipo:'entrada',       fecha:fd(y,m,3),  cuentaId:'CTA002', cuentaDestId:'',    desc:'Thomas Grant - cuota 2/3',              monto:1999 },
@@ -3228,7 +3218,7 @@ async function cargarDatosPrueba() {
   showToast('Escenario Top Realtors cargado ✓','ok');
   setTimeout(() => alert(
     '✅ Escenario real Top Realtors cargado:\n\n' +
-    '👥 Equipo: Frank (socio), Tomas (15% revenue), Eveling (10% sus ventas), Ramiro y Juanma (fijo $500)\n' +
+    '👥 Equipo: Frank (socio), Tomas (15% revenue), Eveling (10% sus ventas)\n' +
     '💰 Ingresos: ' + CACHE.ingresos.length + ' registros — Total: $' + Math.round(totalIng).toLocaleString('es-AR') + ' USD\n' +
     '💸 Gastos: ' + CACHE.gastos.length + ' registros (ADS + Equipo + Herramientas)\n' +
     '🧾 Ventas: 5 clientes activos — Opción 1 ($2.999) y Opción 2 ($5.999)\n' +
@@ -3296,7 +3286,19 @@ function showSection(name, btn) {
   if (name==='configuraciones') renderConfigInfo();
 }
 
-function openModal(name)  { document.getElementById('modal-'+name).classList.add('open'); }
+function openModal(name) {
+  document.getElementById('modal-'+name).classList.add('open');
+  // Poblar selects de "quién paga" con equipo real
+  const pagadorIds = ['sub-pagador', 'edit-sub-pagador'];
+  const equipo = JSON.parse(localStorage.getItem('dash_equipo') || '[]');
+  const opts = '<option value="">— Seleccioná —</option>' +
+    equipo.filter(m => m.activo !== false).map(m => `<option value="${m.nombre}">${m.nombre}</option>`).join('') +
+    '<option value="Empresa">Empresa</option>';
+  pagadorIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { const cur = el.value; el.innerHTML = opts; if (cur) el.value = cur; }
+  });
+}
 function closeModal(name) { document.getElementById('modal-'+name).classList.remove('open'); }
 
 document.querySelectorAll('.modal-overlay').forEach(o => {
