@@ -1717,6 +1717,32 @@ async function saveIngresoSimple() {
   } catch(e) { showToast('Error guardando','err'); }
 }
 
+function matchCuentaByMetodo(metodoPago) {
+  const cuentas = getCuentas();
+  if (!cuentas.length || !metodoPago) return null;
+  const m = metodoPago.toLowerCase();
+  return cuentas.find(c => {
+    const n = c.nombre.toLowerCase();
+    if (m.includes('wise') && n.includes('wise')) return true;
+    if (m.includes('paypal') && n.includes('paypal')) return true;
+    if (m.includes('crypto') && (n.includes('crypto') || c.tipo === 'crypto')) return true;
+    if (m.includes('transferencia') && (c.tipo === 'banco' || n.includes('banco'))) return true;
+    if (m.includes('efectivo') && c.tipo === 'efectivo') return true;
+    if (m.includes('tarjeta') && (n.includes('tarjeta') || c.tipo === 'tarjeta')) return true;
+    return false;
+  }) || null;
+}
+
+function registrarEnTesoreria(cuentaId, fecha, desc, monto) {
+  if (!cuentaId || !monto) return;
+  const movs = getMovimientos();
+  movs.push({ id:'MOV_'+Date.now(), tipo:'entrada', fecha, cuentaId, cuentaDestId:'', desc, monto });
+  saveMovsLocal(movs);
+  renderTesoreria();
+  const cuenta = getCuentas().find(c => c.id === cuentaId);
+  showToast(`Registrado en ${cuenta?.nombre||'tesorería'} ✓`, 'ok');
+}
+
 async function saveVenta() {
   const cliente    = document.getElementById('v-cliente').value.trim();
   const telefono   = document.getElementById('v-telefono').value.trim();
@@ -1756,6 +1782,31 @@ async function saveVenta() {
       if (res.ok) {
         const d = parseFechaLocal(fecha);
         CACHE.ingresos.unshift({ id:res.id, fecha, nombre:cliente, concepto:`Adelanto - ${producto}`, monto:adelanto, vendedor, esVenta:true, mes:d.mes, anio:d.anio });
+        
+        // Registrar adelanto en tesorería
+        const cuentaAuto = matchCuentaByMetodo(metodoPago);
+        if (cuentaAuto) {
+          registrarEnTesoreria(cuentaAuto.id, fecha, `Adelanto - ${cliente} (${producto})`, adelanto);
+        } else {
+          // No encontró cuenta automática — preguntar
+          const cuentas = getCuentas();
+          if (cuentas.length) {
+            const optsHtml = cuentas.map(c => `<option value="${c.id}">${c.emoji||'💵'} ${c.nombre}</option>`).join('');
+            const elegida = await new Promise(resolve => {
+              const div = document.createElement('div');
+              div.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;z-index:9999;display:flex;align-items:center;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,.4)';
+              div.innerHTML = `<span style="font-size:13px;color:var(--text)">¿Registrar adelanto de ${fmt(adelanto)} en tesorería?</span>
+                <select id="_teso-sel" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px">
+                  <option value="">— No registrar —</option>${optsHtml}
+                </select>
+                <button onclick="const v=document.getElementById('_teso-sel').value;this.closest('div').remove();window._tesoResolve(v)" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer">Confirmar</button>`;
+              window._tesoResolve = resolve;
+              document.body.appendChild(div);
+              setTimeout(() => { if(div.isConnected){div.remove();resolve('');} }, 15000);
+            });
+            if (elegida) registrarEnTesoreria(elegida, fecha, `Adelanto - ${cliente} (${producto})`, adelanto);
+          }
+        }
       }
     }
     // Las cuotas se guardan en localStorage
