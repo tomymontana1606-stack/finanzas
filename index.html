@@ -805,16 +805,31 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
 <div class="modal-overlay" id="modal-edit-ingreso">
   <div class="modal">
     <div class="modal-title">Editar Ingreso</div>
+    <div class="modal-sub" id="ei-sub"></div>
     <input type="hidden" id="ei-id" />
+    <input type="hidden" id="ei-es-venta" />
     <div class="form-row">
-      <div class="form-group"><label class="form-label">Nombre</label><input class="form-input" id="ei-nombre" /></div>
+      <div class="form-group"><label class="form-label">Nombre / Cliente</label><input class="form-input" id="ei-nombre" /></div>
       <div class="form-group"><label class="form-label">Fecha</label><input class="form-input" type="date" id="ei-fecha" /></div>
     </div>
     <div class="form-row">
       <div class="form-group"><label class="form-label">Vendedor</label><select class="form-select" id="ei-vendedor"><option value="">— Sin vendedor —</option></select></div>
       <div class="form-group"><label class="form-label">Monto (USD)</label><input class="form-input" type="number" id="ei-monto" /></div>
     </div>
-    <div class="form-group"><label class="form-label">Concepto</label><input class="form-input" id="ei-concepto" /></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Concepto</label><input class="form-input" id="ei-concepto" /></div>
+      <div class="form-group">
+        <label class="form-label">Método de pago</label>
+        <select class="form-select" id="ei-metodo">
+          <option value="">— Seleccioná —</option>
+          <option>Transferencia bancaria</option><option>PayPal</option><option>Wise</option>
+          <option>Crypto</option><option>Tarjeta</option><option>Efectivo</option><option>Otro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="ei-email" placeholder="cliente@email.com" /></div>
+    <div class="form-group"><label class="form-label">Teléfono</label><input class="form-input" id="ei-telefono" placeholder="+54 11 ..." /></div>
+    <div class="form-group"><label class="form-label">Notas</label><input class="form-input" id="ei-notas" placeholder="Observaciones..." /></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('edit-ingreso')">Cancelar</button>
       <button class="btn-save" onclick="updateIngreso()">Guardar cambios</button>
@@ -1840,11 +1855,18 @@ function calcVenta() {
 function editIngreso(id) {
   const r = CACHE.ingresos.find(x => x.id === id);
   if (!r) return;
-  document.getElementById('ei-id').value      = r.id;
-  document.getElementById('ei-nombre').value  = r.nombre||'';
-  document.getElementById('ei-fecha').value   = String(r.fecha).split('T')[0];
-  document.getElementById('ei-concepto').value= r.concepto||'';
-  document.getElementById('ei-monto').value   = r.monto;
+  document.getElementById('ei-id').value       = r.id;
+  document.getElementById('ei-nombre').value   = r.nombre||'';
+  document.getElementById('ei-fecha').value    = String(r.fecha).split('T')[0];
+  document.getElementById('ei-concepto').value = r.concepto||'';
+  document.getElementById('ei-monto').value    = r.monto;
+  document.getElementById('ei-email').value    = r.email||'';
+  document.getElementById('ei-telefono').value = r.telefono||'';
+  document.getElementById('ei-notas').value    = r.notas||'';
+  document.getElementById('ei-es-venta').value = r.esVenta||'';
+  document.getElementById('ei-sub').textContent = r.esVenta ? 'Ingreso de venta' : 'Ingreso simple';
+  const metodoEl = document.getElementById('ei-metodo');
+  if (metodoEl) metodoEl.value = r.metodoPago||'';
   setTimeout(() => {
     const sel = document.getElementById('ei-vendedor');
     if (sel) sel.value = r.vendedor || '';
@@ -1859,13 +1881,17 @@ async function updateIngreso() {
   const vendedor = document.getElementById('ei-vendedor').value;
   const concepto = document.getElementById('ei-concepto').value.trim();
   const monto    = parseFloat(document.getElementById('ei-monto').value);
+  const email    = document.getElementById('ei-email').value.trim();
+  const telefono = document.getElementById('ei-telefono').value.trim();
+  const notas    = document.getElementById('ei-notas').value.trim();
+  const metodoPago = document.getElementById('ei-metodo').value;
   if (!nombre || !monto) { showToast('Completá nombre y monto','err'); return; }
   try {
     const res = await api({ action:'updateIngreso', id, nombre, fecha, concepto, monto, vendedor });
     if (res.ok) {
       const d = parseFechaLocal(fecha);
       const idx = CACHE.ingresos.findIndex(x => x.id === id);
-      if (idx >= 0) CACHE.ingresos[idx] = { ...CACHE.ingresos[idx], nombre, fecha, concepto, monto, vendedor, mes:d.mes, anio:d.anio };
+      if (idx >= 0) CACHE.ingresos[idx] = { ...CACHE.ingresos[idx], nombre, fecha, concepto, monto, vendedor, email, telefono, notas, metodoPago, mes:d.mes, anio:d.anio };
       showToast('Actualizado ✓','ok');
       closeModal('edit-ingreso');
       renderIngresosFromCache();
