@@ -3031,7 +3031,7 @@ function deleteMovimiento(id) {
 // ============================================================
 // CONFIGURACIONES
 // ============================================================
-const LOCAL_KEYS = ['dash_ventas','dash_subs','tesoreria_cuentas','tesoreria_movs'];
+const LOCAL_KEYS = ['dash_ventas','dash_subs','tesoreria_cuentas','tesoreria_movs','ars_usd_tasa','ars_usd_tasa_fecha','dash_token'];
 
 function renderConfigInfo() {
   actualizarInfoTasa();
@@ -3114,8 +3114,8 @@ function restaurarFactory() {
   if (!confirm('Última confirmación. ¿Borrar absolutamente todo?')) return;
   showToast('Restaurando... puede tardar unos segundos','ok');
   LOCAL_KEYS.forEach(k => localStorage.removeItem(k));
-  localStorage.removeItem('dash_token');
-  CACHE.subs = [];
+  localStorage.clear(); // borrar absolutamente todo
+  CACHE.subs = []; CACHE.ventas = []; CACHE.ingresos = []; CACHE.gastos = []; CACHE.equipo = [];
   const borrarSheet = async () => {
     const [rIng, rGas, rEq] = await Promise.all([
       api({ action:'getIngresos', mes:'', anio:'' }),
@@ -3142,7 +3142,7 @@ function limpiarDatosPrueba() {
 async function cargarDatosPrueba() {
   const hayDatos = CACHE.ingresos.length > 0 || CACHE.gastos.length > 0 || JSON.parse(localStorage.getItem('dash_ventas')||'[]').length > 0;
   if (hayDatos) {
-    if (!confirm('Ya hay datos. ¿Reemplazar con el escenario de prueba de Top Realtors?')) return;
+    if (!confirm('Ya hay datos. ¿Reemplazar con el escenario de prueba?')) return;
     const [rIng, rGas, rEq] = await Promise.all([
       api({ action:'getIngresos', mes:'', anio:'' }),
       api({ action:'getGastos',   mes:'', anio:'' }),
@@ -3153,210 +3153,283 @@ async function cargarDatosPrueba() {
       ...(rGas.data||[]).map(r => api({ action:'deleteGasto',   id:r.id })),
       ...(rEq.data||[]).map(r => api({ action:'deleteMiembro',  id:r.id })),
     ]);
-    LOCAL_KEYS.forEach(k => localStorage.removeItem(k));
+    localStorage.clear();
   }
 
-  showToast('Cargando escenario Top Realtors...','ok');
+  showToast('Cargando escenario Top Realtors — $155k mes...','ok');
 
   const now = new Date();
   const fd = (y,m,d) => `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  const fv = (y,m,d) => `${String(d).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`;
   const MESES_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   const pm = f => { const d=new Date(f+'T00:00:00'); return { mes:MESES_ES[d.getMonth()], anio:d.getFullYear() }; };
   const y = now.getFullYear(), m = now.getMonth()+1;
   const pm1 = m===1?12:m-1, pm2 = m<=2?m+10:m-2, pm3 = m<=3?m+9:m-3;
   const py1 = m===1?y-1:y, py2 = m<=2?y-1:y, py3 = m<=3?y-1:y;
+  const nm = (m) => m > 12 ? m - 12 : m;
 
   // ── EQUIPO ──────────────────────────────────────────────────────────
   const equipoData = [
-    { nombre:'Frank',   rol:'CEO / Experto',  tipo:'restante',    valor:0  },
-    { nombre:'Tomas',   rol:'Integrador',     tipo:'revenue_pct', valor:15 },
-    { nombre:'Eveling', rol:'Closer',         tipo:'vendedor',    valor:10 },
-
+    { nombre:'Frank',   rol:'CEO / Socio',    tipo:'restante',    valor:0   },
+    { nombre:'Tomas',   rol:'Integrador',     tipo:'revenue_pct', valor:15  },
+    { nombre:'Eveling', rol:'Closer',         tipo:'vendedor',    valor:10  },
   ];
   const eqRes = await Promise.all(equipoData.map(m2 => api({ action:'addMiembro', ...m2, activo:true })));
   CACHE.equipo = equipoData.map((m2,i) => ({ ...m2, id:eqRes[i].id, activo:true }));
   fillVendedorSelects();
 
-  // ── INGRESOS (últimos 3 meses + mes actual) ──────────────────────────
-  // Formato: mes3 anterior → mes2 ant → mes1 ant → mes actual
-  // Total apox $68.956 distribuido en 4 meses
-  // Opción 1 = $2.999 | Opción 2 = $5.999
+  // ── INGRESOS SHEET (adelantos + cuotas cobradas) ─────────────────────
+  // MES ACTUAL: ~$155.000 en ventas
   const ingRaw = [
-    // MES -3
-    { nombre:'James Anderson',    concepto:'Opción 1 - Membresía Content Pro',     monto:2999, fecha:fd(py3,pm3,3),  vendedor:'Eveling', esVenta:true },
-    { nombre:'Sarah Mitchell',    concepto:'Opción 2 - Membresía Full Service',    monto:5999, fecha:fd(py3,pm3,5),  vendedor:'Eveling', esVenta:true },
-    { nombre:'Robert Torres',     concepto:'Opción 1 - Membresía Content Pro',     monto:2999, fecha:fd(py3,pm3,8),  vendedor:'Eveling', esVenta:true },
-    { nombre:'Linda Chen',        concepto:'Opción 2 - Membresía Full Service',    monto:5999, fecha:fd(py3,pm3,10), vendedor:'Eveling', esVenta:true },
-    { nombre:'Michael Walsh',     concepto:'Cuota 2/2 - Opción 1 Content Pro',     monto:1499, fecha:fd(py3,pm3,15), vendedor:'Eveling', esVenta:true },
-    // MES -2
-    { nombre:'David Kim',         concepto:'Opción 1 - Membresía Content Pro',     monto:2999, fecha:fd(py2,pm2,2),  vendedor:'Eveling', esVenta:true },
-    { nombre:'Amanda Foster',     concepto:'Opción 2 - Membresía Full Service',    monto:5999, fecha:fd(py2,pm2,4),  vendedor:'Eveling', esVenta:true },
-    { nombre:'Carlos Rivera',     concepto:'Opción 1 - Membresía Content Pro',     monto:2999, fecha:fd(py2,pm2,7),  vendedor:'Eveling', esVenta:true },
-    { nombre:'Jennifer Park',     concepto:'Opción 2 - Membresía Full Service',    monto:2999, fecha:fd(py2,pm2,11), vendedor:'Eveling', esVenta:true },
-    { nombre:'James Anderson',    concepto:'Cuota 2/2 - Opción 1 Content Pro',     monto:1499, fecha:fd(py2,pm2,3),  vendedor:'Eveling', esVenta:true },
-    { nombre:'Sarah Mitchell',    concepto:'Cuota 2/2 - Opción 2 Full Service',    monto:2999, fecha:fd(py2,pm2,5),  vendedor:'Eveling', esVenta:true },
+    // MES ACTUAL — ventas nuevas (adelantos)
+    { nombre:'Michael Carter',   concepto:'Adelanto - Opción 2 Full Service',    monto:5000,  fecha:fd(y,m,2),   vendedor:'Eveling', esVenta:true },
+    { nombre:'Jennifer Walsh',   concepto:'Adelanto - Opción 2 Full Service',    monto:4000,  fecha:fd(y,m,3),   vendedor:'Eveling', esVenta:true },
+    { nombre:'David Chen',       concepto:'Adelanto - Opción 1 Content Pro',     monto:2000,  fecha:fd(y,m,4),   vendedor:'Eveling', esVenta:true },
+    { nombre:'Sarah Johnson',    concepto:'Adelanto - Opción 2 Full Service',    monto:6000,  fecha:fd(y,m,5),   vendedor:'Eveling', esVenta:true },
+    { nombre:'Robert Martinez',  concepto:'Adelanto - Opción 1 Content Pro',     monto:1500,  fecha:fd(y,m,6),   vendedor:'Eveling', esVenta:true },
+    { nombre:'Lisa Thompson',    concepto:'Adelanto - Opción 2 Full Service',    monto:5000,  fecha:fd(y,m,8),   vendedor:'Eveling', esVenta:true },
+    { nombre:'James Anderson',   concepto:'Adelanto - Opción 1 Content Pro',     monto:2000,  fecha:fd(y,m,9),   vendedor:'Eveling', esVenta:true },
+    { nombre:'Amanda Foster',    concepto:'Adelanto - Opción 2 Full Service',    monto:4500,  fecha:fd(y,m,10),  vendedor:'Eveling', esVenta:true },
+    { nombre:'Kevin Brooks',     concepto:'Adelanto - Opción 1 Content Pro',     monto:1500,  fecha:fd(y,m,11),  vendedor:'Eveling', esVenta:true },
+    { nombre:'Nancy Cooper',     concepto:'Adelanto - Opción 2 Full Service',    monto:5500,  fecha:fd(y,m,12),  vendedor:'Eveling', esVenta:true },
+    // Cuotas cobradas mes actual
+    { nombre:'Thomas Grant',     concepto:'Cuota 2/3 - Opción 2 Full Service',   monto:4000,  fecha:fd(y,m,3),   vendedor:'Eveling', esVenta:true },
+    { nombre:'Rachel Kim',       concepto:'Cuota 2/2 - Opción 1 Content Pro',    monto:1500,  fecha:fd(y,m,4),   vendedor:'Eveling', esVenta:true },
+    { nombre:'Carlos Rivera',    concepto:'Cuota 3/3 - Opción 2 Full Service',   monto:4000,  fecha:fd(y,m,7),   vendedor:'Eveling', esVenta:true },
+    { nombre:'Linda Park',       concepto:'Saldo pendiente - Opción 1',          monto:1499,  fecha:fd(y,m,10),  vendedor:'Eveling', esVenta:true },
+    { nombre:'Brian Stone',      concepto:'Cuota 2/2 - Opción 2 Full Service',   monto:5999,  fecha:fd(y,m,13),  vendedor:'Eveling', esVenta:true },
+    // Ingresos simples
+    { nombre:'Consultoría estrategia', concepto:'Sesión consultoría 1-1',        monto:800,   fecha:fd(y,m,6),   vendedor:'Frank', esVenta:false },
+    { nombre:'Referral fee',           concepto:'Comisión referido James',        monto:500,   fecha:fd(y,m,9),   vendedor:'Tomas', esVenta:false },
     // MES -1
-    { nombre:'Thomas Grant',      concepto:'Opción 2 - Membresía Full Service',    monto:5999, fecha:fd(py1,pm1,3),  vendedor:'Eveling', esVenta:true },
-    { nombre:'Rachel Brooks',     concepto:'Opción 1 - Membresía Content Pro',     monto:2999, fecha:fd(py1,pm1,6),  vendedor:'Eveling', esVenta:true },
-    { nombre:'Kevin Nguyen',      concepto:'Opción 2 - Membresía Full Service',    monto:2999, fecha:fd(py1,pm1,8),  vendedor:'Eveling', esVenta:true },
-    { nombre:'David Kim',         concepto:'Cuota 2/2 - Opción 1 Content Pro',     monto:1499, fecha:fd(py1,pm1,2),  vendedor:'Eveling', esVenta:true },
-    { nombre:'Amanda Foster',     concepto:'Cuota 2/3 - Opción 2 Full Service',    monto:1999, fecha:fd(py1,pm1,4),  vendedor:'Eveling', esVenta:true },
-    { nombre:'Carlos Rivera',     concepto:'Cuota 2/2 - Opción 1 Content Pro',     monto:1499, fecha:fd(py1,pm1,7),  vendedor:'Eveling', esVenta:true },
-    // MES ACTUAL
-    { nombre:'Nancy Thompson',    concepto:'Opción 2 - Membresía Full Service',    monto:5999, fecha:fd(y,m,2),      vendedor:'Eveling', esVenta:true },
-    { nombre:'Brian Cooper',      concepto:'Opción 1 - Membresía Content Pro',     monto:2999, fecha:fd(y,m,5),      vendedor:'Eveling', esVenta:true },
-    { nombre:'Melissa Stone',     concepto:'Opción 1 - Membresía Content Pro',     monto:1499, fecha:fd(y,m,7),      vendedor:'Eveling', esVenta:true },
-    { nombre:'Thomas Grant',      concepto:'Cuota 2/3 - Opción 2 Full Service',    monto:1999, fecha:fd(y,m,3),      vendedor:'Eveling', esVenta:true },
-    { nombre:'Rachel Brooks',     concepto:'Cuota 2/2 - Opción 1 Content Pro',     monto:1499, fecha:fd(y,m,6),      vendedor:'Eveling', esVenta:true },
+    { nombre:'Thomas Grant',     concepto:'Adelanto - Opción 2 Full Service',    monto:3999,  fecha:fd(py1,pm1,5),  vendedor:'Eveling', esVenta:true },
+    { nombre:'Rachel Kim',       concepto:'Adelanto - Opción 1 Content Pro',     monto:1499,  fecha:fd(py1,pm1,7),  vendedor:'Eveling', esVenta:true },
+    { nombre:'Carlos Rivera',    concepto:'Adelanto - Opción 2 Full Service',    monto:3999,  fecha:fd(py1,pm1,10), vendedor:'Eveling', esVenta:true },
+    { nombre:'Linda Park',       concepto:'Adelanto - Opción 1 Content Pro',     monto:1500,  fecha:fd(py1,pm1,12), vendedor:'Eveling', esVenta:true },
+    { nombre:'Brian Stone',      concepto:'Adelanto - Opción 2 Full Service',    monto:3999,  fecha:fd(py1,pm1,15), vendedor:'Eveling', esVenta:true },
+    // MES -2
+    { nombre:'Patricia Nguyen',  concepto:'Adelanto - Opción 2 Full Service',    monto:3999,  fecha:fd(py2,pm2,3),  vendedor:'Eveling', esVenta:true },
+    { nombre:'Mark Williams',    concepto:'Adelanto - Opción 1 Content Pro',     monto:1499,  fecha:fd(py2,pm2,8),  vendedor:'Eveling', esVenta:true },
+    { nombre:'Sandra Lee',       concepto:'Adelanto - Opción 2 Full Service',    monto:3999,  fecha:fd(py2,pm2,12), vendedor:'Eveling', esVenta:true },
+    // MES -3
+    { nombre:'George Harris',    concepto:'Adelanto - Opción 1 Content Pro',     monto:1499,  fecha:fd(py3,pm3,4),  vendedor:'Eveling', esVenta:true },
+    { nombre:'Helen Turner',     concepto:'Adelanto - Opción 2 Full Service',    monto:3999,  fecha:fd(py3,pm3,8),  vendedor:'Eveling', esVenta:true },
+    { nombre:'Peter Scott',      concepto:'Adelanto - Opción 1 Content Pro',     monto:1499,  fecha:fd(py3,pm3,14), vendedor:'Eveling', esVenta:true },
   ];
   const ingRes = await Promise.all(ingRaw.map(r => api({ action:'addIngreso', ...r })));
   CACHE.ingresos = ingRaw.map((r,i) => { const d=pm(r.fecha); return { ...r, id:ingRes[i].id, mes:d.mes, anio:d.anio }; });
 
-  // ── GASTOS ─────────────────────────────────────────────────────────
+  // ── GASTOS ───────────────────────────────────────────────────────────
   const gasRaw = [
-    // MES -3
-    { categoria:'ADS', concepto:'Meta Ads campaña leads',   monto:2200, fecha:fd(py3,pm3,1) },
-    { categoria:'ADS', concepto:'Google Ads remarketing',   monto:800,  fecha:fd(py3,pm3,1) },
-
-    { categoria:'Herramientas', concepto:'GoHighLevel Pro', monto:297,  fecha:fd(py3,pm3,1) },
-    { categoria:'Herramientas', concepto:'Bunny CDN video', monto:20,   fecha:fd(py3,pm3,1) },
-    // MES -2
-    { categoria:'ADS', concepto:'Meta Ads campaña leads',   monto:2800, fecha:fd(py2,pm2,1) },
-    { categoria:'ADS', concepto:'Google Ads - search',      monto:950,  fecha:fd(py2,pm2,1) },
-
-    { categoria:'Herramientas', concepto:'GoHighLevel Pro', monto:297,  fecha:fd(py2,pm2,1) },
-    { categoria:'Herramientas', concepto:'Canva Pro anual', monto:130,  fecha:fd(py2,pm2,3) },
-    { categoria:'Herramientas', concepto:'ChatGPT Plus',    monto:20,   fecha:fd(py2,pm2,3) },
-    // MES -1
-    { categoria:'ADS', concepto:'Meta Ads escala',          monto:3500, fecha:fd(py1,pm1,1) },
-    { categoria:'ADS', concepto:'Google Ads - search',      monto:1100, fecha:fd(py1,pm1,1) },
-
-    { categoria:'Herramientas', concepto:'GoHighLevel Pro', monto:297,  fecha:fd(py1,pm1,1) },
-    { categoria:'Herramientas', concepto:'Bunny CDN video', monto:20,   fecha:fd(py1,pm1,1) },
     // MES ACTUAL
-    { categoria:'ADS', concepto:'Meta Ads - mayo',          monto:3200, fecha:fd(y,m,1) },
-    { categoria:'ADS', concepto:'Google Ads - mayo',        monto:900,  fecha:fd(y,m,1) },
-
-    { categoria:'Herramientas', concepto:'GoHighLevel Pro', monto:297,  fecha:fd(y,m,1) },
-    { categoria:'Herramientas', concepto:'Bunny CDN video', monto:20,   fecha:fd(y,m,1) },
-    { categoria:'Herramientas', concepto:'ChatGPT Plus',    monto:20,   fecha:fd(y,m,1) },
+    { categoria:'ADS',          concepto:'Meta Ads — campaña captación mayo',   monto:4500,  fecha:fd(y,m,1) },
+    { categoria:'ADS',          concepto:'Google Ads — search mayo',            monto:1800,  fecha:fd(y,m,1) },
+    { categoria:'Herramientas', concepto:'GoHighLevel Pro',                     monto:297,   fecha:fd(y,m,1) },
+    { categoria:'Herramientas', concepto:'ChatGPT Plus',                        monto:20,    fecha:fd(y,m,1) },
+    { categoria:'Herramientas', concepto:'Bunny CDN — hosting video',           monto:45,    fecha:fd(y,m,1) },
+    { categoria:'Herramientas', concepto:'CapCut Pro',                          monto:15,    fecha:fd(y,m,2) },
+    { categoria:'Herramientas', concepto:'Canva Pro',                           monto:13,    fecha:fd(y,m,2) },
+    { categoria:'Herramientas', concepto:'Notion Team',                         monto:16,    fecha:fd(y,m,2) },
+    { categoria:'Herramientas', concepto:'Slack Pro',                           monto:8,     fecha:fd(y,m,3) },
+    { categoria:'Herramientas', concepto:'Zoom Pro',                            monto:15,    fecha:fd(y,m,3) },
+    { categoria:'Equipo',       concepto:'Tomas — comisión revenue 15%',        monto:23250, fecha:fd(y,m,5) },
+    { categoria:'Equipo',       concepto:'Eveling — comisión ventas 10%',       monto:3750,  fecha:fd(y,m,5) },
+    { categoria:'Otro',         concepto:'Edición de video freelance',          monto:400,   fecha:fd(y,m,8) },
+    { categoria:'Otro',         concepto:'Diseño thumbnail pack',               monto:150,   fecha:fd(y,m,10) },
+    // MES -1
+    { categoria:'ADS',          concepto:'Meta Ads abril',                      monto:3800,  fecha:fd(py1,pm1,1) },
+    { categoria:'ADS',          concepto:'Google Ads abril',                    monto:1200,  fecha:fd(py1,pm1,1) },
+    { categoria:'Herramientas', concepto:'GoHighLevel Pro',                     monto:297,   fecha:fd(py1,pm1,1) },
+    { categoria:'Herramientas', concepto:'ChatGPT Plus',                        monto:20,    fecha:fd(py1,pm1,1) },
+    { categoria:'Herramientas', concepto:'Bunny CDN',                           monto:38,    fecha:fd(py1,pm1,1) },
+    { categoria:'Equipo',       concepto:'Tomas — comisión revenue',            monto:8500,  fecha:fd(py1,pm1,5) },
+    { categoria:'Equipo',       concepto:'Eveling — comisión ventas',           monto:1799,  fecha:fd(py1,pm1,5) },
+    // MES -2
+    { categoria:'ADS',          concepto:'Meta Ads marzo',                      monto:2900,  fecha:fd(py2,pm2,1) },
+    { categoria:'ADS',          concepto:'Google Ads marzo',                    monto:900,   fecha:fd(py2,pm2,1) },
+    { categoria:'Herramientas', concepto:'GoHighLevel Pro',                     monto:297,   fecha:fd(py2,pm2,1) },
+    { categoria:'Herramientas', concepto:'Canva Pro anual',                     monto:130,   fecha:fd(py2,pm2,3) },
+    { categoria:'Equipo',       concepto:'Tomas — comisión revenue',            monto:7200,  fecha:fd(py2,pm2,5) },
+    // MES -3
+    { categoria:'ADS',          concepto:'Meta Ads febrero',                    monto:2200,  fecha:fd(py3,pm3,1) },
+    { categoria:'Herramientas', concepto:'GoHighLevel Pro',                     monto:297,   fecha:fd(py3,pm3,1) },
+    { categoria:'Equipo',       concepto:'Tomas — comisión revenue',            monto:5100,  fecha:fd(py3,pm3,5) },
   ];
   const gasRes = await Promise.all(gasRaw.map(r => api({ action:'addGasto', ...r })));
   CACHE.gastos = gasRaw.map((r,i) => { const d=pm(r.fecha); return { ...r, id:gasRes[i].id, mes:d.mes, anio:d.anio }; });
 
-  // ── VENTAS CON CUOTAS (localStorage) ───────────────────────────────
+  // ── VENTAS CON CUOTAS (localStorage) ────────────────────────────────
   const ventas = [
-    // Ventas activas mes actual con cuotas pendientes
-    {
-      id:'VTR001', cliente:'Nancy Thompson', telefono:'+1 305 555-0192', email:'nancy.thompson@realty.com',
-      fecha:fd(y,m,2), vendedor:'Eveling', producto:'Opción 2 - Full Service', metodoPago:'Transferencia',
-      total:5999, adelanto:2999, saldo:3000, nCuotas:2, notas:'Agente top producer Miami. Renovación en 3 meses.',
+    // Ventas activas mes actual — todas con cuotas pendientes
+    { id:'VTR001', cliente:'Michael Carter',  telefono:'+1 305 555-0192', email:'m.carter@carterrealty.com',
+      fecha:fd(y,m,2), vendedor:'Eveling', producto:'Opción 2 - Full Service', metodoPago:'Wise',
+      total:12000, adelanto:5000, saldo:7000, nCuotas:2, notas:'Top producer Miami. 50 transacciones/año.',
       cuotas:[
-        { num:1, monto:1500, vence:fd(y,m+1<=12?m+1:1,2), pagada:false },
-        { num:2, monto:1500, vence:fd(y,m+2<=12?m+2:2,2), pagada:false },
-      ]
-    },
-    {
-      id:'VTR002', cliente:'Brian Cooper', telefono:'+1 786 555-0341', email:'b.cooper@luxuryrealty.com',
-      fecha:fd(y,m,5), vendedor:'Eveling', producto:'Opción 1 - Content Pro', metodoPago:'PayPal',
-      total:2999, adelanto:1499, saldo:1500, nCuotas:1, notas:'Agente boutique. Primera vez con content marketing.',
+        { num:1, monto:3500, vence:fv(y,nm(m+1),2),  pagada:false },
+        { num:2, monto:3500, vence:fv(y,nm(m+2),2),  pagada:false },
+      ]},
+    { id:'VTR002', cliente:'Jennifer Walsh',  telefono:'+1 786 555-0341', email:'j.walsh@walshproperties.com',
+      fecha:fd(y,m,3), vendedor:'Eveling', producto:'Opción 2 - Full Service', metodoPago:'PayPal',
+      total:12000, adelanto:4000, saldo:8000, nCuotas:2, notas:'Broker Coral Gables. Especialista lujo.',
       cuotas:[
-        { num:1, monto:1499, vence:fd(y,m+1<=12?m+1:1,5), pagada:false },
-      ]
-    },
-    {
-      id:'VTR003', cliente:'Thomas Grant', telefono:'+1 954 555-0287', email:'tgrant@grantrealty.com',
-      fecha:fd(py1,pm1,3), vendedor:'Eveling', producto:'Opción 2 - Full Service', metodoPago:'Wise',
-      total:5999, adelanto:1999, saldo:4000, nCuotas:3, notas:'Broker independiente. Quiere posicionarse en lujo.',
+        { num:1, monto:4000, vence:fv(y,nm(m+1),3),  pagada:false },
+        { num:2, monto:4000, vence:fv(y,nm(m+2),3),  pagada:false },
+      ]},
+    { id:'VTR003', cliente:'David Chen',      telefono:'+1 954 555-0287', email:'d.chen@chenrealestate.com',
+      fecha:fd(y,m,4), vendedor:'Eveling', producto:'Opción 1 - Content Pro', metodoPago:'Transferencia bancaria',
+      total:5999, adelanto:2000, saldo:3999, nCuotas:2, notas:'Agente independiente. Quiere generar leads orgánicos.',
       cuotas:[
-        { num:1, monto:1333, vence:fd(py1,pm1,3),        pagada:true, montoCobrado:1333, metodo:'Wise', fechaCobro:fd(py1,pm1,3), notas:'Pago puntual', ingresoId:ingRes[11].id },
-        { num:2, monto:1333, vence:fd(y,m,3),             pagada:true, montoCobrado:1999, metodo:'Wise', fechaCobro:fd(y,m,3), notas:'Pagó un poco más este mes', ingresoId:ingRes[20].id },
-        { num:3, monto:1334, vence:fd(y,m+1<=12?m+1:1,3), pagada:false },
-      ]
-    },
-    {
-      id:'VTR004', cliente:'Rachel Brooks', telefono:'+1 561 555-0163', email:'rbrooks@palmestate.com',
-      fecha:fd(py1,pm1,6), vendedor:'Eveling', producto:'Opción 1 - Content Pro', metodoPago:'Transferencia',
-      total:2999, adelanto:1499, saldo:1500, nCuotas:2, notas:'Agente Palm Beach. Foco en propiedades $1M+.',
+        { num:1, monto:2000, vence:fv(y,nm(m+1),4),  pagada:false },
+        { num:2, monto:1999, vence:fv(y,nm(m+2),4),  pagada:false },
+      ]},
+    { id:'VTR004', cliente:'Sarah Johnson',   telefono:'+1 561 555-0163', email:'s.johnson@luxurymia.com',
+      fecha:fd(y,m,5), vendedor:'Eveling', producto:'Opción 2 - Full Service', metodoPago:'Wise',
+      total:12000, adelanto:6000, saldo:6000, nCuotas:2, notas:'Agente Palm Beach $2M+ properties.',
       cuotas:[
-        { num:1, monto:750, vence:fd(py1,pm1,6),  pagada:true, montoCobrado:750, metodo:'Transferencia', fechaCobro:fd(py1,pm1,6), notas:'', ingresoId:ingRes[13].id },
-        { num:2, monto:750, vence:fd(y,m,6),       pagada:true, montoCobrado:1499, metodo:'Transferencia', fechaCobro:fd(y,m,6), notas:'Cerró con cuota anterior', ingresoId:ingRes[21].id },
-      ]
-    },
-    {
-      id:'VTR005', cliente:'Amanda Foster', telefono:'+1 305 555-0448', email:'amanda@fosterlux.com',
-      fecha:fd(py2,pm2,4), vendedor:'Eveling', producto:'Opción 2 - Full Service', metodoPago:'PayPal',
-      total:5999, adelanto:1999, saldo:4000, nCuotas:3, notas:'Team leader con 8 agentes. Gran potencial de referidos.',
+        { num:1, monto:3000, vence:fv(y,nm(m+1),5),  pagada:false },
+        { num:2, monto:3000, vence:fv(y,nm(m+2),5),  pagada:false },
+      ]},
+    { id:'VTR005', cliente:'Robert Martinez', telefono:'+1 305 555-0449', email:'r.martinez@miamiagent.com',
+      fecha:fd(y,m,6), vendedor:'Eveling', producto:'Opción 1 - Content Pro', metodoPago:'Transferencia bancaria',
+      total:5999, adelanto:1500, saldo:4499, nCuotas:3, notas:'Primer mes. Perfil Instagram con 2k seguidores.',
       cuotas:[
-        { num:1, monto:1333, vence:fd(py2,pm2,4),  pagada:true, montoCobrado:1333, metodo:'PayPal', fechaCobro:fd(py2,pm2,4), notas:'', ingresoId:ingRes[7].id },
-        { num:2, monto:1333, vence:fd(py1,pm1,4),  pagada:true, montoCobrado:1999, metodo:'PayPal', fechaCobro:fd(py1,pm1,4), notas:'Cuota extra', ingresoId:ingRes[15].id },
-        { num:3, monto:1334, vence:fd(y,m+1<=12?m+1:1,4), pagada:false },
-      ]
-    },
+        { num:1, monto:1500, vence:fv(y,nm(m+1),6),  pagada:false },
+        { num:2, monto:1500, vence:fv(y,nm(m+2),6),  pagada:false },
+        { num:3, monto:1499, vence:fv(y,nm(m+3),6),  pagada:false },
+      ]},
+    { id:'VTR006', cliente:'Lisa Thompson',   telefono:'+1 786 555-0512', email:'l.thompson@thompsonre.com',
+      fecha:fd(y,m,8), vendedor:'Eveling', producto:'Opción 2 - Full Service', metodoPago:'PayPal',
+      total:12000, adelanto:5000, saldo:7000, nCuotas:2, notas:'Equipo de 3 agentes. Scaling agresivo.',
+      cuotas:[
+        { num:1, monto:3500, vence:fv(y,nm(m+1),8),  pagada:false },
+        { num:2, monto:3500, vence:fv(y,nm(m+2),8),  pagada:false },
+      ]},
+    { id:'VTR007', cliente:'James Anderson',  telefono:'+1 954 555-0671', email:'j.anderson@andersonhomes.com',
+      fecha:fd(y,m,9), vendedor:'Eveling', producto:'Opción 1 - Content Pro', metodoPago:'Transferencia bancaria',
+      total:5999, adelanto:2000, saldo:3999, nCuotas:2, notas:'Agente Fort Lauderdale. 8 años experiencia.',
+      cuotas:[
+        { num:1, monto:2000, vence:fv(y,nm(m+1),9),  pagada:false },
+        { num:2, monto:1999, vence:fv(y,nm(m+2),9),  pagada:false },
+      ]},
+    { id:'VTR008', cliente:'Amanda Foster',   telefono:'+1 561 555-0783', email:'a.foster@fosterluxury.com',
+      fecha:fd(y,m,10), vendedor:'Eveling', producto:'Opción 2 - Full Service', metodoPago:'Wise',
+      total:12000, adelanto:4500, saldo:7500, nCuotas:2, notas:'Top agent Boca Raton. Muy activa en redes.',
+      cuotas:[
+        { num:1, monto:3750, vence:fv(y,nm(m+1),10), pagada:false },
+        { num:2, monto:3750, vence:fv(y,nm(m+2),10), pagada:false },
+      ]},
+    { id:'VTR009', cliente:'Kevin Brooks',    telefono:'+1 786 555-0892', email:'k.brooks@brooksrealty.com',
+      fecha:fd(y,m,11), vendedor:'Eveling', producto:'Opción 1 - Content Pro', metodoPago:'PayPal',
+      total:5999, adelanto:1500, saldo:4499, nCuotas:3, notas:'Agente joven. Alto potencial de crecimiento.',
+      cuotas:[
+        { num:1, monto:1500, vence:fv(y,nm(m+1),11), pagada:false },
+        { num:2, monto:1500, vence:fv(y,nm(m+2),11), pagada:false },
+        { num:3, monto:1499, vence:fv(y,nm(m+3),11), pagada:false },
+      ]},
+    { id:'VTR010', cliente:'Nancy Cooper',    telefono:'+1 305 555-0934', email:'n.cooper@cooperestates.com',
+      fecha:fd(y,m,12), vendedor:'Eveling', producto:'Opción 2 - Full Service', metodoPago:'Wise',
+      total:12000, adelanto:5500, saldo:6500, nCuotas:2, notas:'Referida por Thomas Grant. Broker Aventura.',
+      cuotas:[
+        { num:1, monto:3250, vence:fv(y,nm(m+1),12), pagada:false },
+        { num:2, monto:3250, vence:fv(y,nm(m+2),12), pagada:false },
+      ]},
+    // Ventas mes anterior — cuotas parcialmente cobradas
+    { id:'VTR011', cliente:'Thomas Grant',    telefono:'+1 954 555-1001', email:'t.grant@grantrealty.com',
+      fecha:fd(py1,pm1,5), vendedor:'Eveling', producto:'Opción 2 - Full Service', metodoPago:'Wise',
+      total:12000, adelanto:3999, saldo:8001, nCuotas:3, notas:'Broker independiente. Foco en lujo.',
+      cuotas:[
+        { num:1, monto:2667, vence:fv(y,m,5),        pagada:true, montoCobrado:4000, metodo:'Wise', fechaCobro:fd(y,m,3), notas:'Adelantó un poco más' },
+        { num:2, monto:2667, vence:fv(y,nm(m+1),5),  pagada:false },
+        { num:3, monto:2667, vence:fv(y,nm(m+2),5),  pagada:false },
+      ]},
+    { id:'VTR012', cliente:'Rachel Kim',      telefono:'+1 786 555-1102', email:'r.kim@kimproperties.com',
+      fecha:fd(py1,pm1,7), vendedor:'Eveling', producto:'Opción 1 - Content Pro', metodoPago:'Transferencia bancaria',
+      total:5999, adelanto:1499, saldo:4500, nCuotas:2, notas:'Agente Wynwood. Foco en reels y TikTok.',
+      cuotas:[
+        { num:1, monto:1500, vence:fv(y,m,7),        pagada:true, montoCobrado:1500, metodo:'Transferencia', fechaCobro:fd(y,m,4) },
+        { num:2, monto:3000, vence:fv(y,nm(m+1),7),  pagada:false },
+      ]},
+    { id:'VTR013', cliente:'Carlos Rivera',   telefono:'+1 954 555-1203', email:'c.rivera@riverahomes.com',
+      fecha:fd(py1,pm1,10), vendedor:'Eveling', producto:'Opción 2 - Full Service', metodoPago:'PayPal',
+      total:12000, adelanto:3999, saldo:8001, nCuotas:3, notas:'Agente Hialeah. Gran red de contactos.',
+      cuotas:[
+        { num:1, monto:2667, vence:fv(y,m,10),       pagada:true, montoCobrado:4000, metodo:'PayPal', fechaCobro:fd(y,m,7) },
+        { num:2, monto:2667, vence:fv(y,nm(m+1),10), pagada:false },
+        { num:3, monto:2667, vence:fv(y,nm(m+2),10), pagada:false },
+      ]},
   ];
+  localStorage.setItem('dash_ventas', JSON.stringify(ventas));
 
-  // ── SUSCRIPCIONES ───────────────────────────────────────────────────
-  const subs = [
-    { id:'S001', nombre:'GoHighLevel',    emoji:'🚀', plan:'pro',      ciclo:'mensual', costo:297, vence:fd(y,m+1<=12?m+1:1,1), categoria:'CRM',        cuenta:'admin@toprealtors.com',    notas:'Agency Pro. Subaccounts: 12 agentes activos.' },
-    { id:'S002', nombre:'Bunny.net CDN',  emoji:'🐰', plan:'basico',   ciclo:'mensual', costo:20,  vence:fd(y,m,15),            categoria:'Hosting',     cuenta:'billing@toprealtors.com',  notas:'CDN para streaming de videos VSL.' },
-    { id:'S003', nombre:'ChatGPT Plus',   emoji:'🤖', plan:'pro',      ciclo:'mensual', costo:20,  vence:fd(y,m,18),            categoria:'IA',          cuenta:'frank@toprealtors.com',    notas:'Para guiones y copy.' },
-    { id:'S004', nombre:'Canva Pro',      emoji:'🎨', plan:'pro',      ciclo:'anual',   costo:130, vence:fd(y,m<=4?m+8:m-4,1), categoria:'Diseño',      cuenta:'equipo@toprealtors.com',   notas:'5 usuarios. Thumbnails y gráficas.' },
-    { id:'S005', nombre:'Notion',         emoji:'📝', plan:'gratuito', ciclo:'gratis',  costo:0,   vence:'',                    categoria:'Otro',        cuenta:'workspace@toprealtors.com',notas:'Base de datos de clientes y procesos.' },
-    { id:'S006', nombre:'Wise Business',  emoji:'💸', plan:'basico',   ciclo:'gratis',  costo:0,   vence:'',                    categoria:'Otro',        cuenta:'business@toprealtors.com', notas:'Cobros USD internacionales sin comisión.' },
-    { id:'S007', nombre:'CapCut Pro',     emoji:'🎬', plan:'pro',      ciclo:'mensual', costo:7,   vence:fd(y,m,20),            categoria:'Video',       cuenta:'edicion@toprealtors.com',  notas:'Edición reels y podcast cuts.' },
-    { id:'S008', nombre:'Descript',       emoji:'🎙️', plan:'pro',      ciclo:'mensual', costo:24,  vence:fd(y,m,10),            categoria:'Video',       cuenta:'podcast@toprealtors.com',  notas:'Edición podcast y transcripciones.' },
+  // ── SUSCRIPCIONES ────────────────────────────────────────────────────
+  const subsData = [
+    { nombre:'GoHighLevel',  emoji:'🚀', plan:'Pro',      ciclo:'Mensual',  costo:297,  vence:fv(y,nm(m+1),1),  categoria:'CRM',         cuenta:'cuenta@toprealtors.com', notas:'Plan agencia. Incluye 3 sub-cuentas.', pagador:'Frank', metodoPago:'Tarjeta empresa', tarjetaDigits:'4231' },
+    { nombre:'Meta Ads',     emoji:'📣', plan:'Business', ciclo:'Mensual',  costo:0,    vence:fv(y,nm(m+1),1),  categoria:'Marketing',   cuenta:'ads@toprealtors.com',    notas:'Gasto variable según campaña.', pagador:'Frank', metodoPago:'Tarjeta empresa', tarjetaDigits:'4231' },
+    { nombre:'ChatGPT',      emoji:'🤖', plan:'Plus',     ciclo:'Mensual',  costo:20,   vence:fv(y,nm(m+1),15), categoria:'Herramientas', cuenta:'tomas@toprealtors.com',  notas:'', pagador:'Tomas', metodoPago:'Tarjeta personal', tarjetaDigits:'7892' },
+    { nombre:'Canva',        emoji:'🎨', plan:'Pro',      ciclo:'Anual',    costo:130,  vence:fv(y+1,pm2,3),    categoria:'Diseño',      cuenta:'design@toprealtors.com', notas:'Renovación anual. Compartido con Eveling.', pagador:'Frank', metodoPago:'Tarjeta empresa', tarjetaDigits:'4231' },
+    { nombre:'Bunny CDN',    emoji:'🐰', plan:'Pay/uso',  ciclo:'Mensual',  costo:45,   vence:fv(y,nm(m+1),1),  categoria:'Hosting',     cuenta:'tech@toprealtors.com',   notas:'Hosting videos clientes. Aumenta con volumen.', pagador:'Tomas', metodoPago:'Tarjeta personal', tarjetaDigits:'7892' },
+    { nombre:'Notion',       emoji:'📝', plan:'Team',     ciclo:'Mensual',  costo:16,   vence:fv(y,nm(m+1),10), categoria:'Productividad', cuenta:'team@toprealtors.com',  notas:'3 usuarios.', pagador:'Tomas', metodoPago:'Tarjeta personal', tarjetaDigits:'7892' },
+    { nombre:'Zoom',         emoji:'📹', plan:'Pro',      ciclo:'Mensual',  costo:15,   vence:fv(y,nm(m+1),8),  categoria:'Comunicación', cuenta:'calls@toprealtors.com', notas:'Para onboarding clientes.', pagador:'Frank', metodoPago:'Tarjeta empresa', tarjetaDigits:'4231' },
+    { nombre:'Slack',        emoji:'💬', plan:'Pro',      ciclo:'Mensual',  costo:8,    vence:fv(y,nm(m+1),8),  categoria:'Comunicación', cuenta:'team@toprealtors.com',   notas:'', pagador:'Frank', metodoPago:'Tarjeta empresa', tarjetaDigits:'4231' },
+    { nombre:'CapCut',       emoji:'✂️', plan:'Pro',      ciclo:'Mensual',  costo:15,   vence:fv(y,nm(m+1),20), categoria:'Edición',     cuenta:'eveling@toprealtors.com', notas:'Edición reels y videos.', pagador:'Eveling', metodoPago:'Tarjeta personal', tarjetaDigits:'3341' },
   ];
-
-  // ── TESORERÍA ───────────────────────────────────────────────────────
-  const cuentas = [
-    { id:'CTA001', nombre:'Efectivo USD',    emoji:'💵', tipo:'efectivo', moneda:'USD',  saldoInicial:2400,    desc:'Caja física oficina Miami' },
-    { id:'CTA002', nombre:'Wise USD',        emoji:'💸', tipo:'digital',  moneda:'USD',  saldoInicial:18500,   desc:'wise.com · business@toprealtors.com — cobros internacionales' },
-    { id:'CTA003', nombre:'PayPal Business', emoji:'🅿️', tipo:'digital',  moneda:'USD',  saldoInicial:7200,    desc:'paypal.me/toprealtors — cobros clientes USA' },
-    { id:'CTA004', nombre:'Efectivo ARS',    emoji:'💴', tipo:'efectivo', moneda:'ARS',  saldoInicial:850000,  desc:'Pesos para gastos operativos locales' },
-    { id:'CTA005', nombre:'USDT Binance',    emoji:'₿',  tipo:'crypto',   moneda:'USDT', saldoInicial:3800,    desc:'Binance BEP20 · reserva estratégica' },
-    { id:'CTA006', nombre:'Transferencia AR',emoji:'🏦', tipo:'banco',    moneda:'ARS',  saldoInicial:320000,  desc:'Banco Galicia · CBU para proveedores locales' },
-  ];
-  const movs = [
-    { id:'M001', tipo:'entrada',       fecha:fd(y,m,2),  cuentaId:'CTA002', cuentaDestId:'',    desc:'Nancy Thompson - adelanto Opción 2',    monto:2999 },
-    { id:'M002', tipo:'entrada',       fecha:fd(y,m,5),  cuentaId:'CTA003', cuentaDestId:'',    desc:'Brian Cooper - adelanto Opción 1',      monto:1499 },
-    { id:'M003', tipo:'salida',        fecha:fd(y,m,1),  cuentaId:'CTA002', cuentaDestId:'',    desc:'Meta Ads - pago campaña mayo',          monto:3200 },
-    { id:'M004', tipo:'salida',        fecha:fd(y,m,1),  cuentaId:'CTA003', cuentaDestId:'',    desc:'Google Ads - mayo',                     monto:900  },
-    
-    { id:'M006', tipo:'salida',        fecha:fd(y,m,1),  cuentaId:'CTA003', cuentaDestId:'',    desc:'GoHighLevel mensual',                   monto:297  },
-    { id:'M007', tipo:'transferencia', fecha:fd(y,m,8),  cuentaId:'CTA003', cuentaDestId:'CTA002', desc:'PayPal → Wise (consolidación)',      monto:5000 },
-    { id:'M008', tipo:'entrada',       fecha:fd(y,m,3),  cuentaId:'CTA002', cuentaDestId:'',    desc:'Thomas Grant - cuota 2/3',              monto:1999 },
-    { id:'M009', tipo:'entrada',       fecha:fd(y,m,6),  cuentaId:'CTA002', cuentaDestId:'',    desc:'Rachel Brooks - cuota final',           monto:1499 },
-    { id:'M010', tipo:'salida',        fecha:fd(y,m,7),  cuentaId:'CTA004', cuentaDestId:'',    desc:'Equipamiento grabación (reemplazo)',    monto:180000 },
-  ];
-
-  localStorage.setItem('dash_ventas',         JSON.stringify(ventas));
-  localStorage.setItem('dash_subs',           JSON.stringify(subs));
-  localStorage.setItem('tesoreria_cuentas',   JSON.stringify(cuentas));
-  localStorage.setItem('tesoreria_movs',      JSON.stringify(movs));
+  const subs = subsData.map((s,i) => ({ ...s, id:'SUB'+String(i+1).padStart(3,'0') }));
+  localStorage.setItem('dash_subs', JSON.stringify(subs));
   CACHE.subs = subs;
 
+  // ── TESORERÍA ────────────────────────────────────────────────────────
+  const cuentas = [
+    { id:'CTA001', nombre:'Wise USD',       emoji:'💸', tipo:'digital',   moneda:'USD', saldo:0 },
+    { id:'CTA002', nombre:'PayPal',         emoji:'🅿️', tipo:'digital',   moneda:'USD', saldo:0 },
+    { id:'CTA003', nombre:'Transferencia',  emoji:'🏦', tipo:'banco',     moneda:'USD', saldo:0 },
+    { id:'CTA004', nombre:'Efectivo USD',   emoji:'💵', tipo:'efectivo',  moneda:'USD', saldo:0 },
+    { id:'CTA005', nombre:'Tarjeta empresa',emoji:'💳', tipo:'tarjeta',   moneda:'USD', saldo:0 },
+    { id:'CTA006', nombre:'Crypto USDT',    emoji:'₿',  tipo:'crypto',    moneda:'USDT', saldo:0 },
+  ];
+  localStorage.setItem('tesoreria_cuentas', JSON.stringify(cuentas));
+
+  const movs = [
+    // Entradas mes actual
+    { id:'MOV001', tipo:'entrada', fecha:fd(y,m,2),  cuentaId:'CTA001', cuentaDestId:'', desc:'Adelanto Michael Carter',   monto:5000 },
+    { id:'MOV002', tipo:'entrada', fecha:fd(y,m,3),  cuentaId:'CTA002', cuentaDestId:'', desc:'Adelanto Jennifer Walsh',   monto:4000 },
+    { id:'MOV003', tipo:'entrada', fecha:fd(y,m,4),  cuentaId:'CTA003', cuentaDestId:'', desc:'Adelanto David Chen',       monto:2000 },
+    { id:'MOV004', tipo:'entrada', fecha:fd(y,m,5),  cuentaId:'CTA001', cuentaDestId:'', desc:'Adelanto Sarah Johnson',    monto:6000 },
+    { id:'MOV005', tipo:'entrada', fecha:fd(y,m,6),  cuentaId:'CTA003', cuentaDestId:'', desc:'Adelanto Robert Martinez',  monto:1500 },
+    { id:'MOV006', tipo:'entrada', fecha:fd(y,m,8),  cuentaId:'CTA002', cuentaDestId:'', desc:'Adelanto Lisa Thompson',    monto:5000 },
+    { id:'MOV007', tipo:'entrada', fecha:fd(y,m,9),  cuentaId:'CTA003', cuentaDestId:'', desc:'Adelanto James Anderson',   monto:2000 },
+    { id:'MOV008', tipo:'entrada', fecha:fd(y,m,10), cuentaId:'CTA001', cuentaDestId:'', desc:'Adelanto Amanda Foster',    monto:4500 },
+    { id:'MOV009', tipo:'entrada', fecha:fd(y,m,11), cuentaId:'CTA002', cuentaDestId:'', desc:'Adelanto Kevin Brooks',     monto:1500 },
+    { id:'MOV010', tipo:'entrada', fecha:fd(y,m,12), cuentaId:'CTA001', cuentaDestId:'', desc:'Adelanto Nancy Cooper',     monto:5500 },
+    { id:'MOV011', tipo:'entrada', fecha:fd(y,m,3),  cuentaId:'CTA001', cuentaDestId:'', desc:'Cuota Thomas Grant',        monto:4000 },
+    { id:'MOV012', tipo:'entrada', fecha:fd(y,m,4),  cuentaId:'CTA003', cuentaDestId:'', desc:'Cuota Rachel Kim',          monto:1500 },
+    { id:'MOV013', tipo:'entrada', fecha:fd(y,m,7),  cuentaId:'CTA002', cuentaDestId:'', desc:'Cuota Carlos Rivera',       monto:4000 },
+    // Salidas mes actual
+    { id:'MOV020', tipo:'salida',  fecha:fd(y,m,1),  cuentaId:'CTA005', cuentaDestId:'', desc:'GoHighLevel Pro',           monto:297  },
+    { id:'MOV021', tipo:'salida',  fecha:fd(y,m,1),  cuentaId:'CTA005', cuentaDestId:'', desc:'Meta Ads mayo',             monto:4500 },
+    { id:'MOV022', tipo:'salida',  fecha:fd(y,m,1),  cuentaId:'CTA005', cuentaDestId:'', desc:'Google Ads mayo',           monto:1800 },
+    { id:'MOV023', tipo:'salida',  fecha:fd(y,m,5),  cuentaId:'CTA001', cuentaDestId:'', desc:'Comisión Tomas 15%',        monto:23250},
+    { id:'MOV024', tipo:'salida',  fecha:fd(y,m,5),  cuentaId:'CTA001', cuentaDestId:'', desc:'Comisión Eveling 10%',      monto:3750 },
+    // Transferencias internas
+    { id:'MOV030', tipo:'transferencia', fecha:fd(y,m,6), cuentaId:'CTA001', cuentaDestId:'CTA004', desc:'Retiro efectivo Frank', monto:3000 },
+  ];
+  localStorage.setItem('tesoreria_movs', JSON.stringify(movs));
+
+  // Tasa de cambio
+  localStorage.setItem('ars_usd_tasa', '1200');
+  localStorage.setItem('ars_usd_tasa_fecha', new Date().toISOString().split('T')[0]);
+
+  // Reload cache
+  CACHE.ventas = ventas;
   renderDashboardFromCache();
   renderIngresosFromCache();
-  renderGastosFromCache();
   renderCuotas();
+  renderTesoreria();
   renderSubs();
   renderEquipo();
-  renderConfigInfo();
 
-  const totalIng = CACHE.ingresos.reduce((s,r)=>s+r.monto,0);
-  showToast('Escenario Top Realtors cargado ✓','ok');
-  setTimeout(() => alert(
-    '✅ Escenario real Top Realtors cargado:\n\n' +
-    '👥 Equipo: Frank (socio), Tomas (15% revenue), Eveling (10% sus ventas)\n' +
-    '💰 Ingresos: ' + CACHE.ingresos.length + ' registros — Total: $' + Math.round(totalIng).toLocaleString('es-AR') + ' USD\n' +
-    '💸 Gastos: ' + CACHE.gastos.length + ' registros (ADS + Equipo + Herramientas)\n' +
-    '🧾 Ventas: 5 clientes activos — Opción 1 ($2.999) y Opción 2 ($5.999)\n' +
-    '📋 Cuotas: Mix de pagadas, pendientes y próximas\n' +
-    '🔗 Suscripciones: 8 herramientas del negocio\n' +
-    '🏦 Tesorería: 6 cuentas (USD efectivo, Wise, PayPal, ARS, USDT, Banco)\n\n' +
-    '📊 El gráfico de línea de tiempo muestra los últimos 4 meses.'
-  ), 500);
+  showToast('✅ Escenario cargado — $155.000 facturación, 13 ventas, 9 suscripciones','ok');
 }
+
+
 function pagarSaldo(ventaId) {
   try {
     const ventas = JSON.parse(localStorage.getItem('dash_ventas') || '[]');
