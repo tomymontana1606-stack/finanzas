@@ -1476,6 +1476,20 @@ function renderDashboardFromCache() {
 
   const porCat = {};
   gastos.forEach(g => { porCat[g.categoria] = (porCat[g.categoria]||0) + g.monto; });
+  
+  // Sumar suscripciones: en su categoría propia Y en la categoría que tienen
+  const subs = JSON.parse(localStorage.getItem('dash_subs') || '[]');
+  const subsActivasCosto = subs.filter(s => s.costo > 0);
+  let totalSubs = 0;
+  subsActivasCosto.forEach(s => {
+    const costoMes = s.ciclo === 'Anual' ? +(s.costo/12).toFixed(2) : +s.costo;
+    // En su categoría original
+    porCat[s.categoria] = (porCat[s.categoria]||0) + costoMes;
+    // En categoría "Suscripciones" también
+    porCat['Suscripciones'] = (porCat['Suscripciones']||0) + costoMes;
+    totalSubs += costoMes;
+  });
+  
   renderChartGastos(porCat);
   renderChartDonut(totalIngresos, totalGastos, Math.max(0, revenue));
   renderChartTimeline();
