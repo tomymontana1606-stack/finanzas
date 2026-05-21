@@ -1969,8 +1969,17 @@ function renderCuotas() {
       let estado = 'pendiente';
       if (c.pagada) { estado='pagada'; cuotasCobradas++; }
       else if (c.vence) {
-        const vd = new Date(c.vence); vd.setHours(0,0,0,0);
+        const pts = c.vence.split('/');
+        let vd;
+        if (pts.length === 3) {
+          const [dd,mm,yy] = pts.map(Number);
+          vd = new Date(yy, mm-1, dd);
+        } else {
+          vd = new Date(c.vence);
+        }
+        vd.setHours(0,0,0,0);
         if (vd < hoy) { estado='vencida'; cuotasVencidas++; }
+        else if (vd <= en15dias) { estado='por-vencer'; cuotasPorVencer++; }
       }
       const infoExtra = c.pagada
         ? `<div class="cobro-info">${c.metodo||''}${c.notas ? ' · ' + c.notas : ''}${c.fechaCobro ? ' · ' + fmtFecha(c.fechaCobro) : ''}${c.montoCobrado && c.montoCobrado !== c.monto ? ' · Cobrado: '+fmt(c.montoCobrado) : ''}</div>`
@@ -1995,11 +2004,11 @@ function renderCuotas() {
       <div class="venta-card ${(() => {
               const hoy = new Date();
               const tieneVencidas = v.cuotas.some(c => {
-                if (!c || !c.vencimiento || c.pagada) return false;
-                const pts = c.vencimiento.split('/');
+                if (!c || !c.vence || c.pagada) return false;
+                const pts = c.vence.split('/');
                 if (pts.length !== 3) return false;
                 const [dd, mm, yy] = pts.map(Number);
-                return new Date(yy, mm-1, dd) < hoy;
+                return new Date(yy, mm-1, dd) < new Date();
               });
               return (saldoReal > 0 || tieneVencidas) ? 'pendiente' : '';
             })()}">
@@ -2034,6 +2043,18 @@ function renderCuotas() {
   document.getElementById('cuota-total').textContent = fmt(totalPorCobrar);
   document.getElementById('cuota-vencidas').textContent = cuotasVencidas;
   document.getElementById('cuota-cobradas').textContent = cuotasCobradas;
+  document.getElementById('cuota-por-vencer').textContent = cuotasPorVencer;
+
+  // Color dinámico del indicador
+  const cardVencer = document.getElementById('cuota-por-vencer-card');
+  const valVencer = document.getElementById('cuota-por-vencer');
+  if (cuotasVencidas > 0) {
+    cardVencer.style.borderTopColor = 'var(--red)'; valVencer.style.color = 'var(--red)';
+  } else if (cuotasPorVencer > 0) {
+    cardVencer.style.borderTopColor = '#FF9500'; valVencer.style.color = '#FF9500';
+  } else {
+    cardVencer.style.borderTopColor = 'var(--green)'; valVencer.style.color = 'var(--green)';
+  }
 }
 
 function abrirModalCobro(ventaId, cuotaIdx) {
