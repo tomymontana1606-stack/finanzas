@@ -956,13 +956,17 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
       </div>
       <div class="form-group">
         <label class="form-label">Método de pago</label>
-        <select class="form-select" id="sub-metodo-pago">
+        <select class="form-select" id="sub-metodo-pago" onchange="toggleTarjetaDigits('sub')">
           <option value="">— Seleccioná —</option>
           <option>Tarjeta personal</option><option>Tarjeta empresa</option>
           <option>PayPal</option><option>Wise</option><option>Transferencia</option>
           <option>Crypto</option><option>Efectivo</option><option>Otro</option>
         </select>
       </div>
+    </div>
+    <div class="form-group" id="sub-tarjeta-wrap" style="display:none">
+      <label class="form-label">Últimos 4 dígitos de la tarjeta</label>
+      <input class="form-input" id="sub-tarjeta-digits" placeholder="Ej: 4521" maxlength="4" style="width:120px" />
     </div>
     <div class="form-group"><label class="form-label">Notas</label><input class="form-input" id="sub-notas" placeholder="Observaciones, condiciones, link de factura..." /></div>
     <div class="modal-actions">
@@ -1020,13 +1024,17 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
       </div>
       <div class="form-group">
         <label class="form-label">Método de pago</label>
-        <select class="form-select" id="es-metodo-pago">
+        <select class="form-select" id="es-metodo-pago" onchange="toggleTarjetaDigits('es')">
           <option value="">— Seleccioná —</option>
           <option>Tarjeta personal</option><option>Tarjeta empresa</option>
           <option>PayPal</option><option>Wise</option><option>Transferencia</option>
           <option>Crypto</option><option>Efectivo</option><option>Otro</option>
         </select>
       </div>
+    </div>
+    <div class="form-group" id="es-tarjeta-wrap" style="display:none">
+      <label class="form-label">Últimos 4 dígitos de la tarjeta</label>
+      <input class="form-input" id="es-tarjeta-digits" placeholder="Ej: 4521" maxlength="4" style="width:120px" />
     </div>
     <div class="form-group"><label class="form-label">Notas</label><input class="form-input" id="es-notas" /></div>
     <div class="modal-actions">
@@ -2357,6 +2365,7 @@ async function saveSub() {
     cuenta:    document.getElementById('sub-cuenta').value.trim(),
     pagador:   document.getElementById('sub-pagador').value,
     metodoPago:document.getElementById('sub-metodo-pago').value,
+    tarjetaDigits:document.getElementById('sub-tarjeta-digits')?.value?.trim() || '',
     notas:     document.getElementById('sub-notas').value.trim()
   };
   CACHE.subs.unshift(sub);
@@ -3286,11 +3295,17 @@ function showSection(name, btn) {
   if (name==='configuraciones') renderConfigInfo();
 }
 
+function toggleTarjetaDigits(prefix) {
+  const metodo = document.getElementById(prefix+'-metodo-pago')?.value || '';
+  const wrap = document.getElementById(prefix+'-tarjeta-wrap');
+  if (wrap) wrap.style.display = metodo.startsWith('Tarjeta') ? 'block' : 'none';
+}
+
 function openModal(name) {
   document.getElementById('modal-'+name).classList.add('open');
   // Poblar selects de "quién paga" con equipo real
   const pagadorIds = ['sub-pagador', 'edit-sub-pagador'];
-  const equipo = JSON.parse(localStorage.getItem('dash_equipo') || '[]');
+  const equipo = (typeof CACHE !== 'undefined' && CACHE.equipo) ? CACHE.equipo : [];
   const opts = '<option value="">— Seleccioná —</option>' +
     equipo.filter(m => m.activo !== false).map(m => `<option value="${m.nombre}">${m.nombre}</option>`).join('') +
     '<option value="Empresa">Empresa</option>';
