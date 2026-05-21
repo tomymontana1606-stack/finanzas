@@ -804,20 +804,42 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
 <!-- Editar ingreso -->
 <div class="modal-overlay" id="modal-edit-ingreso">
   <div class="modal">
-    <div class="modal-title">Editar Ingreso</div>
+    <div class="modal-title" id="ei-title">Editar Ingreso</div>
     <div class="modal-sub" id="ei-sub"></div>
     <input type="hidden" id="ei-id" />
     <input type="hidden" id="ei-es-venta" />
+
+    <!-- Sección cliente (solo para ventas) -->
+    <div id="ei-seccion-cliente">
+      <div class="form-section-label" style="font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;margin:8px 0 6px">👤 Datos del cliente</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Nombre del cliente</label><input class="form-input" id="ei-nombre" placeholder="Nombre completo" /></div>
+        <div class="form-group"><label class="form-label">Teléfono</label><input class="form-input" id="ei-telefono" placeholder="+54 11 ..." /></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="ei-email" placeholder="cliente@email.com" /></div>
+        <div class="form-group"><label class="form-label">Fecha de venta</label><input class="form-input" type="date" id="ei-fecha" /></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Vendedor</label><select class="form-select" id="ei-vendedor"><option value="">— Sin vendedor —</option></select></div>
+        <div class="form-group"><label class="form-label">Servicio / Producto</label><input class="form-input" id="ei-producto" placeholder="Ej: Membresía anual" /></div>
+      </div>
+    </div>
+
+    <!-- Sección ingreso simple (cuando no es venta) -->
+    <div id="ei-seccion-simple" style="display:none">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Nombre</label><input class="form-input" id="ei-nombre-simple" /></div>
+        <div class="form-group"><label class="form-label">Fecha</label><input class="form-input" type="date" id="ei-fecha-simple" /></div>
+      </div>
+    </div>
+
+    <div class="form-section-label" style="font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 6px">💰 Estructura de pago</div>
     <div class="form-row">
-      <div class="form-group"><label class="form-label">Nombre / Cliente</label><input class="form-input" id="ei-nombre" /></div>
-      <div class="form-group"><label class="form-label">Fecha</label><input class="form-input" type="date" id="ei-fecha" /></div>
+      <div class="form-group"><label class="form-label">Precio total (USD)</label><input class="form-input" type="number" id="ei-total" placeholder="0" min="0" step="0.01" /></div>
+      <div class="form-group"><label class="form-label">Adelanto / Seña (USD)</label><input class="form-input" type="number" id="ei-adelanto" placeholder="0" min="0" step="0.01" /></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label class="form-label">Vendedor</label><select class="form-select" id="ei-vendedor"><option value="">— Sin vendedor —</option></select></div>
-      <div class="form-group"><label class="form-label">Monto (USD)</label><input class="form-input" type="number" id="ei-monto" /></div>
-    </div>
-    <div class="form-row">
-      <div class="form-group"><label class="form-label">Concepto</label><input class="form-input" id="ei-concepto" /></div>
       <div class="form-group">
         <label class="form-label">Método de pago</label>
         <select class="form-select" id="ei-metodo">
@@ -826,9 +848,9 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
           <option>Crypto</option><option>Tarjeta</option><option>Efectivo</option><option>Otro</option>
         </select>
       </div>
+      <div class="form-group"><label class="form-label">Monto (USD)</label><input class="form-input" type="number" id="ei-monto" /></div>
     </div>
-    <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="ei-email" placeholder="cliente@email.com" /></div>
-    <div class="form-group"><label class="form-label">Teléfono</label><input class="form-input" id="ei-telefono" placeholder="+54 11 ..." /></div>
+    <div class="form-group"><label class="form-label">Concepto</label><input class="form-input" id="ei-concepto" placeholder="Descripción del ingreso" /></div>
     <div class="form-group"><label class="form-label">Notas</label><input class="form-input" id="ei-notas" placeholder="Observaciones..." /></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('edit-ingreso')">Cancelar</button>
@@ -1855,21 +1877,42 @@ function calcVenta() {
 function editIngreso(id) {
   const r = CACHE.ingresos.find(x => x.id === id);
   if (!r) return;
+  
+  const esVenta = !!r.esVenta;
   document.getElementById('ei-id').value       = r.id;
-  document.getElementById('ei-nombre').value   = r.nombre||'';
-  document.getElementById('ei-fecha').value    = String(r.fecha).split('T')[0];
+  document.getElementById('ei-es-venta').value = esVenta;
   document.getElementById('ei-concepto').value = r.concepto||'';
   document.getElementById('ei-monto').value    = r.monto;
-  document.getElementById('ei-email').value    = r.email||'';
-  document.getElementById('ei-telefono').value = r.telefono||'';
   document.getElementById('ei-notas').value    = r.notas||'';
-  document.getElementById('ei-es-venta').value = r.esVenta||'';
-  document.getElementById('ei-sub').textContent = r.esVenta ? 'Ingreso de venta' : 'Ingreso simple';
-  const metodoEl = document.getElementById('ei-metodo');
-  if (metodoEl) metodoEl.value = r.metodoPago||'';
+  document.getElementById('ei-metodo').value   = r.metodoPago||'';
+  document.getElementById('ei-title').textContent = esVenta ? 'Editar Venta' : 'Editar Ingreso';
+  document.getElementById('ei-sub').textContent = esVenta ? 'Modificá los datos de la venta' : 'Ingreso simple';
+  
+  // Mostrar/ocultar secciones
+  document.getElementById('ei-seccion-cliente').style.display = esVenta ? 'block' : 'none';
+  document.getElementById('ei-seccion-simple').style.display  = esVenta ? 'none' : 'block';
+  
+  if (esVenta) {
+    // Buscar datos de la venta en dash_ventas
+    const ventas = JSON.parse(localStorage.getItem('dash_ventas') || '[]');
+    const v = ventas.find(x => x.cliente === r.nombre) || {};
+    document.getElementById('ei-nombre').value   = r.nombre||'';
+    document.getElementById('ei-telefono').value = v.telefono||r.telefono||'';
+    document.getElementById('ei-email').value    = v.email||r.email||'';
+    document.getElementById('ei-fecha').value    = String(r.fecha).split('T')[0];
+    document.getElementById('ei-producto').value = v.producto||'';
+    document.getElementById('ei-total').value    = v.total||r.monto||'';
+    document.getElementById('ei-adelanto').value = v.adelanto||'';
+  } else {
+    document.getElementById('ei-nombre-simple').value = r.nombre||'';
+    document.getElementById('ei-fecha-simple').value  = String(r.fecha).split('T')[0];
+    document.getElementById('ei-total').value    = r.monto||'';
+    document.getElementById('ei-adelanto').value = '';
+  }
+  
   setTimeout(() => {
     const sel = document.getElementById('ei-vendedor');
-    if (sel) sel.value = r.vendedor || '';
+    if (sel) { sel.value = r.vendedor || ''; }
   }, 50);
   openModal('edit-ingreso');
 }
