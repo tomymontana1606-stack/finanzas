@@ -188,6 +188,35 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
   backdrop-filter: blur(10px);
 }
 
+.filter-btn {
+  padding: 6px 12px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  color: rgba(255,255,255,0.6);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--font-sans);
+}
+
+.filter-btn:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.9);
+}
+
+.filter-btn.active {
+  background: rgba(59,130,246,0.2);
+  border-color: rgba(59,130,246,0.4);
+  color: #60A5FA;
+}
+
+.filter-btn svg {
+  vertical-align: middle;
+}
+
 
 /* TABLES */
 .table-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:16px; }
@@ -608,8 +637,16 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
             <div>
               <div class="chart-title" style="margin-bottom:2px">Ingresos vs Gastos</div>
-              <div style="font-size:11px;color:var(--muted)">Últimos 6 meses</div>
+              <div style="font-size:11px;color:var(--muted)" id="timeline-range-label">Últimos 6 meses</div>
             </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <button class="filter-btn active" data-range="6m">6M</button>
+              <button class="filter-btn" data-range="1y">1Y</button>
+              <button class="filter-btn" data-range="2y">2Y</button>
+              <button class="filter-btn" data-range="all">Todo</button>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
             <div style="display:flex;gap:16px">
               <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,0.5)"><span style="width:24px;height:2px;background:#00E5FF;display:inline-block;border-radius:2px"></span>Ingresos</span>
               <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,0.5)"><span style="width:24px;height:2px;background:#FF4560;display:inline-block;border-radius:2px"></span>Gastos</span>
@@ -1905,16 +1942,21 @@ function renderAlertas() {
     </div>`;
 }
 
-function renderChartTimeline() {
+// Global variable for timeline range
+let TIMELINE_MONTHS = 6;
+
+function renderChartTimeline(months = TIMELINE_MONTHS) {
   const container = document.getElementById('chart-timeline-container');
   if (!container) return;
 
   const MESES_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   const now = new Date();
   
-  // Build last 6 months
+  // Build months array based on filter
   const meses = [];
-  for (let i = 5; i >= 0; i--) {
+  const totalMonths = months === 'all' ? 24 : months; // 'all' shows 2 years max
+  
+  for (let i = totalMonths - 1; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     meses.push({ 
       label: MESES_ES[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2), 
@@ -4166,6 +4208,51 @@ function showToast(msg, type='ok') {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
 }
+
+// Timeline chart date range filter
+document.addEventListener('DOMContentLoaded', () => {
+  const filterBtns = document.querySelectorAll('.filter-btn');
+  const rangeLabel = document.getElementById('timeline-range-label');
+  
+  const rangeLabels = {
+    '6m': 'Últimos 6 meses',
+    '1y': 'Último año',
+    '2y': 'Últimos 2 años',
+    'all': 'Todo el período'
+  };
+  
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      // Remove active class from all buttons
+      filterBtns.forEach(b => b.classList.remove('active'));
+      
+      // Add active to clicked button
+      btn.classList.add('active');
+      
+      // Get range value
+      const range = btn.dataset.range;
+      
+      // Update label
+      if (rangeLabel) {
+        rangeLabel.textContent = rangeLabels[range] || 'Período personalizado';
+      }
+      
+      // Calculate months
+      let months;
+      switch(range) {
+        case '6m': months = 6; break;
+        case '1y': months = 12; break;
+        case '2y': months = 24; break;
+        case 'all': months = 'all'; break;
+        default: months = 6;
+      }
+      
+      // Update global and re-render chart
+      TIMELINE_MONTHS = months;
+      renderChartTimeline(months);
+    });
+  });
+});
 </script>
 </body>
 </html>
