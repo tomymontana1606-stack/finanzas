@@ -66,7 +66,17 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
 
 /* METRICS */
 .metrics-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
-.metric-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:18px 16px; position:relative; overflow:hidden; }
+.metric-card { 
+  background:var(--card); 
+  border:1px solid var(--border); 
+  border-radius:var(--radius); 
+  padding:18px 16px; 
+  position:relative; 
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  min-height:120px;
+}
 .metric-card::after { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
 .metric-card.m-blue::after   { background:var(--accent); }
 .metric-card.m-gold::after   { background:var(--gold); }
@@ -74,15 +84,40 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
 .metric-card.m-green::after  { background:var(--green); }
 .metric-card.m-purple::after { background:var(--purple); }
 .metric-card.m-orange::after { background:var(--orange); }
-.metric-label { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
-.metric-value { font-size:26px; font-weight:500; line-height:1; margin-bottom:4px; }
+.metric-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
+.metric-label { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); }
+.metric-change { 
+  display:flex; 
+  align-items:center; 
+  gap:3px; 
+  font-size:11px; 
+  font-weight:600;
+  padding:3px 7px;
+  border-radius:4px;
+}
+.metric-change.positive { color:var(--green); background:rgba(46,204,113,0.1); }
+.metric-change.negative { color:var(--red); background:rgba(231,76,60,0.1); }
+.metric-change svg { width:12px; height:12px; }
+.metric-value { font-size:26px; font-weight:500; line-height:1.1; margin-bottom:8px; }
 .metric-card.m-blue   .metric-value { color:var(--accent); }
 .metric-card.m-gold   .metric-value { color:var(--gold); }
 .metric-card.m-red    .metric-value { color:var(--red); }
 .metric-card.m-green  .metric-value { color:var(--green); }
 .metric-card.m-purple .metric-value { color:var(--purple); }
 .metric-card.m-orange .metric-value { color:var(--orange); }
-.metric-hint { font-size:11px; color:var(--muted); }
+.metric-hint { font-size:11px; color:var(--muted); margin-bottom:auto; }
+.metric-sparkline { 
+  height:32px; 
+  margin-top:8px;
+  position:relative;
+}
+.metric-sparkline svg { width:100%; height:100%; }
+.metric-sparkline path { 
+  vector-effect: non-scaling-stroke; 
+  stroke-linecap:round; 
+  stroke-linejoin:round; 
+}
+
 
 /* CHARTS */
 .charts-row { display:grid; grid-template-columns:1.4fr 1fr; gap:16px; margin-bottom:20px; }
@@ -451,10 +486,57 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
         </div>
       </div>
       <div class="metrics-grid">
-        <div class="metric-card m-gold"><div class="metric-label">Ingresos</div><div class="metric-value" id="m-ingresos">—</div><div class="metric-hint">Total del período</div></div>
-        <div class="metric-card m-red"><div class="metric-label">Gastos</div><div class="metric-value" id="m-gastos">—</div><div class="metric-hint">Total del período</div></div>
-        <div class="metric-card m-green"><div class="metric-label">Revenue Neto</div><div class="metric-value" id="m-revenue">—</div><div class="metric-hint">Ingresos − Gastos</div></div>
-        <div class="metric-card m-blue"><div class="metric-label">ROI</div><div class="metric-value" id="m-roi">—</div><div class="metric-hint">Retorno / inversión</div></div>
+        <div class="metric-card m-gold">
+          <div class="metric-header">
+            <div class="metric-label">Ingresos</div>
+            <div class="metric-change positive" id="change-ingresos" style="display:none">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+              <span>0%</span>
+            </div>
+          </div>
+          <div class="metric-value" id="m-ingresos">—</div>
+          <div class="metric-hint">Total del período</div>
+          <div class="metric-sparkline" id="spark-ingresos"></div>
+        </div>
+
+        <div class="metric-card m-red">
+          <div class="metric-header">
+            <div class="metric-label">Gastos</div>
+            <div class="metric-change negative" id="change-gastos" style="display:none">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+              <span>0%</span>
+            </div>
+          </div>
+          <div class="metric-value" id="m-gastos">—</div>
+          <div class="metric-hint">Total del período</div>
+          <div class="metric-sparkline" id="spark-gastos"></div>
+        </div>
+
+        <div class="metric-card m-green">
+          <div class="metric-header">
+            <div class="metric-label">Revenue Neto</div>
+            <div class="metric-change positive" id="change-revenue" style="display:none">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+              <span>0%</span>
+            </div>
+          </div>
+          <div class="metric-value" id="m-revenue">—</div>
+          <div class="metric-hint">Ingresos − Gastos</div>
+          <div class="metric-sparkline" id="spark-revenue"></div>
+        </div>
+
+        <div class="metric-card m-blue">
+          <div class="metric-header">
+            <div class="metric-label">ROI</div>
+            <div class="metric-change positive" id="change-roi" style="display:none">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+              <span>0%</span>
+            </div>
+          </div>
+          <div class="metric-value" id="m-roi">—</div>
+          <div class="metric-hint">Retorno / inversión</div>
+          <div class="metric-sparkline" id="spark-roi"></div>
+        </div>
       </div>
       <div class="charts-row" style="grid-template-columns:1fr">
         <div class="chart-card" style="padding:22px 24px">
@@ -1439,6 +1521,97 @@ function getPeriod(id) {
 // ============================================================
 // DASHBOARD
 // ============================================================
+// ============================================================
+// SPARKLINE CHARTS FOR METRICS
+// ============================================================
+
+function generateSparkline(containerId, data, color) {
+  const container = document.getElementById(containerId);
+  if (!container || !data || data.length < 2) return;
+
+  const width = container.clientWidth || 200;
+  const height = 32;
+  const padding = 2;
+
+  const max = Math.max(...data);
+  const min = Math.min(...data);
+  const range = max - min || 1;
+
+  const xStep = width / (data.length - 1);
+  
+  const points = data.map((value, i) => {
+    const x = i * xStep;
+    const y = height - padding - ((value - min) / range) * (height - padding * 2);
+    return `${x},${y}`;
+  });
+
+  const linePath = `M ${points.join(' L ')}`;
+  
+  // Create gradient for area
+  const gradientId = `gradient-${containerId}`;
+  
+  // Build area path
+  const areaPoints = [...points];
+  areaPoints.push(`${width},${height}`);
+  areaPoints.push(`0,${height}`);
+  const areaPath = `M ${areaPoints.join(' L ')} Z`;
+
+  const svg = `
+    <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="${gradientId}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${color}" stop-opacity="0.3"/>
+          <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d="${areaPath}" fill="url(#${gradientId})"/>
+      <path d="${linePath}" fill="none" stroke="${color}" stroke-width="2"/>
+    </svg>
+  `;
+
+  container.innerHTML = svg;
+}
+
+function updateMetricChange(elementId, currentValue, previousValue) {
+  const el = document.getElementById(elementId);
+  if (!el || previousValue === 0) {
+    if (el) el.style.display = 'none';
+    return;
+  }
+
+  const change = ((currentValue - previousValue) / previousValue) * 100;
+  const isPositive = change >= 0;
+  
+  el.style.display = 'flex';
+  el.className = `metric-change ${isPositive ? 'positive' : 'negative'}`;
+  
+  const arrow = isPositive 
+    ? '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>'
+    : '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>';
+  
+  el.innerHTML = `${arrow}<span>${Math.abs(change).toFixed(1)}%</span>`;
+}
+
+function generateSparklineData(records, mes, anio) {
+  // Generate last 6 months of data for sparkline
+  const months = [];
+  const currentDate = new Date();
+  
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+    months.push({
+      mes: ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][d.getMonth()],
+      anio: d.getFullYear()
+    });
+  }
+
+  return months.map(m => {
+    return records
+      .filter(r => r.mes === m.mes && String(r.anio) === String(m.anio))
+      .reduce((sum, r) => sum + r.monto, 0);
+  });
+}
+
 function renderDashboardFromCache() {
   const { mes, anio } = getPeriod('period-select');
   document.getElementById('dash-period').textContent = mes ? `${mes} ${anio}` : 'Todos los períodos';
@@ -1459,6 +1632,32 @@ function renderDashboardFromCache() {
   document.getElementById('m-gastos').textContent   = fmt(totalGastos);
   document.getElementById('m-revenue').textContent  = fmt(revenue);
   document.getElementById('m-roi').textContent      = roi.toFixed(2) + '%';
+
+  // Generate sparklines
+  const ingresosData = generateSparklineData(CACHE.ingresos, mes, anio);
+  const gastosData = generateSparklineData(CACHE.gastos, mes, anio);
+  const revenueData = ingresosData.map((ing, i) => ing - (gastosData[i] || 0));
+  const roiData = gastosData.map((gasto, i) => {
+    const ing = ingresosData[i] || 0;
+    const rev = ing - gasto;
+    return gasto > 0 ? (rev / gasto) * 100 : 0;
+  });
+
+  generateSparkline('spark-ingresos', ingresosData, '#F7C948');
+  generateSparkline('spark-gastos', gastosData, '#E74C3C');
+  generateSparkline('spark-revenue', revenueData, '#2ECC71');
+  generateSparkline('spark-roi', roiData, '#2563EB');
+
+  // Calculate change vs previous period
+  const prevMonthIngresos = ingresosData[ingresosData.length - 2] || 0;
+  const prevMonthGastos = gastosData[gastosData.length - 2] || 0;
+  const prevMonthRevenue = revenueData[revenueData.length - 2] || 0;
+  const prevMonthRoi = roiData[roiData.length - 2] || 0;
+
+  updateMetricChange('change-ingresos', totalIngresos, prevMonthIngresos);
+  updateMetricChange('change-gastos', totalGastos, prevMonthGastos);
+  updateMetricChange('change-revenue', revenue, prevMonthRevenue);
+  updateMetricChange('change-roi', roi, prevMonthRoi);
 
   // Comisiones con lógica avanzada
   const tbody = document.getElementById('tbody-comisiones');
