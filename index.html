@@ -358,7 +358,6 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
 
 /* GLOBAL LOADER */
 #global-loader { position:fixed; inset:0; background:var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:500; gap:16px; }
-@media (max-width:900px) {
   .metrics-grid,.subs-stats { grid-template-columns:repeat(2,1fr); }
   .charts-row { grid-template-columns:1fr; }
 }
@@ -489,7 +488,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
               <div style="font-size:10px;color:var(--muted);margin-top:2px">sin cobrar</div>
             </div>
             <div style="background:var(--surface);border-radius:10px;padding:14px;border-left:3px solid #FF9500">
-              <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Próximos 30 días</div>
+              <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Próximo mes</div>
               <div id="dcs-proximo" style="font-size:22px;font-weight:700;color:#FF9500;margin-top:4px">—</div>
               <div style="font-size:10px;color:var(--muted);margin-top:2px">por vencer</div>
             </div>
@@ -659,8 +658,8 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
           <button class="cfg-btn cfg-blue" onclick="cargarDatosPrueba()">
             <span style="font-size:18px">🚀</span>
             <div>
-              <div style="font-weight:500;font-size:13px">Cargar escenario $750k</div>
-              <div style="font-size:11px;color:var(--muted)">Escenario $750k, 15 empleados</div>
+              <div style="font-weight:500;font-size:13px">Cargar escenario completo</div>
+              <div style="font-size:11px;color:var(--muted)">Equipo, ventas, gastos, subs</div>
             </div>
           </button>
           <button class="cfg-btn cfg-red" onclick="limpiarDatosPrueba()">
@@ -798,16 +797,11 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
         </select>
       </div>
       <div class="form-group">
-        <label class="form-label">Método de pago</label>
+        <label class="form-label">Cuenta de cobro</label>
         <select class="form-select" id="v-metodo-pago">
-          <option value="Transferencia">Transferencia bancaria</option>
-          <option value="Efectivo">Efectivo</option>
-          <option value="PayPal">PayPal</option>
-          <option value="Wise">Wise</option>
-          <option value="Crypto">Crypto</option>
-          <option value="Tarjeta">Tarjeta</option>
-          <option value="Mixto">Mixto</option>
+          <option value="">— Seleccionar cuenta —</option>
         </select>
+        <div class="form-hint">La cuenta donde se deposita el adelanto. Si no tenés cuentas, <span style="color:var(--accent);cursor:pointer" onclick="alert('Andá a Tesorería → + Agregar cuenta para crear tus cuentas de cobro')">creá una primero</span>.</div>
       </div>
     </div>
     <div class="form-group">
@@ -1295,7 +1289,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
 // ============================================================
 // CONFIG
 // ============================================================
-const API_URL = 'https://script.google.com/macros/s/AKfycbxI_d6SGxrgXVVvD8H4nmH81TYOBdomysAvDuaCoo-EdEjoR67AORuU8eh5btBg-Bx_3g/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbw6YrNEwA5Hjt0U_TOVbgrC_BdzIXkH1egY1aN6XjXoDdjbxYAAu1gHWGZzdzuKs_dFRw/exec';
 
 let TOKEN = localStorage.getItem('dash_token') || '';
 let CACHE = { ingresos:[], gastos:[], equipo:[], subs:[], ventas:[], cuentas:[], movimientos:[] };
@@ -1338,6 +1332,30 @@ function fillVendedorSelects() {
     const el = document.getElementById(id);
     if (el) el.innerHTML = opts;
   });
+}
+
+function fillMetodoPagoSelect() {
+  const cuentas = getCuentas();
+  const sel = document.getElementById('v-metodo-pago');
+  if (!sel) return;
+  
+  if (!cuentas.length) {
+    sel.innerHTML = `
+      <option value="">— Sin cuentas configuradas —</option>
+      <option value="Transferencia">Transferencia (genérica)</option>
+      <option value="Efectivo">Efectivo (genérica)</option>
+      <option value="PayPal">PayPal (genérica)</option>
+      <option value="Wise">Wise (genérica)</option>
+      <option value="Crypto">Crypto (genérica)</option>
+    `;
+    return;
+  }
+  
+  sel.innerHTML = '<option value="">— Seleccionar cuenta —</option>' +
+    cuentas.map(c => {
+      const label = `${c.emoji||'💵'} ${c.nombre} (${c.moneda})`;
+      return `<option value="${c.id}" data-nombre="${c.nombre}">${label}</option>`;
+    }).join('');
 }
 
 // ============================================================
@@ -1416,119 +1434,6 @@ function getPeriod(id) {
   const sel = document.getElementById(id);
   const [mes, anio] = (sel ? sel.value : '|').split('|');
   return { mes, anio };
-}
-
-
-// ============================================================
-// FECHAS SEGURAS — evita confundir DD/MM/YYYY con MM/DD/YYYY
-// ============================================================
-function parseDateSafe(value) {
-  if (!value) return null;
-
-  if (Object.prototype.toString.call(value) === '[object Date]') {
-    if (isNaN(value.getTime())) return null;
-    return new Date(value.getFullYear(), value.getMonth(), value.getDate());
-  }
-
-  const raw = String(value).trim();
-  if (!raw) return null;
-  const s = raw.split('T')[0].trim();
-
-  // YYYY-MM-DD
-  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-  if (m) {
-    const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
-    const date = new Date(y, mo - 1, d);
-    return isNaN(date.getTime()) ? null : date;
-  }
-
-  // DD/MM/YYYY o DD-MM-YYYY
-  m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-  if (m) {
-    const d = Number(m[1]), mo = Number(m[2]), y = Number(m[3]);
-    const date = new Date(y, mo - 1, d);
-    return isNaN(date.getTime()) ? null : date;
-  }
-
-  const fallback = new Date(raw);
-  if (isNaN(fallback.getTime())) return null;
-  return new Date(fallback.getFullYear(), fallback.getMonth(), fallback.getDate());
-}
-
-function todaySafe() {
-  const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-}
-
-function addDaysSafe(date, days) {
-  const d = parseDateSafe(date);
-  if (!d) return null;
-  const copy = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  copy.setDate(copy.getDate() + days);
-  return copy;
-}
-
-function sameMonthSafe(a, b) {
-  const da = parseDateSafe(a);
-  const db = parseDateSafe(b);
-  if (!da || !db) return false;
-  return da.getMonth() === db.getMonth() && da.getFullYear() === db.getFullYear();
-}
-
-function isCuotaVencida(cuota, hoy = todaySafe()) {
-  if (!cuota || cuota.pagada || !cuota.vence) return false;
-  const vence = parseDateSafe(cuota.vence);
-  return !!vence && vence < hoy;
-}
-
-function isCuotaPorVencer(cuota, dias = 30, hoy = todaySafe()) {
-  if (!cuota || cuota.pagada || !cuota.vence) return false;
-  const vence = parseDateSafe(cuota.vence);
-  if (!vence) return false;
-  const limite = addDaysSafe(hoy, dias);
-  return vence >= hoy && vence <= limite;
-}
-
-function isCuotaCobradaEsteMes(cuota, hoy = todaySafe()) {
-  if (!cuota || !cuota.pagada || !cuota.fechaCobro) return false;
-  return sameMonthSafe(cuota.fechaCobro, hoy);
-}
-
-function getCuotasPendientesData(ventas = JSON.parse(localStorage.getItem('dash_ventas') || '[]')) {
-  const hoy = todaySafe();
-  const limite7 = addDaysSafe(hoy, 7);
-  const limite30 = addDaysSafe(hoy, 30);
-  const data = {
-    totalPendiente: 0,
-    vencidas: [],
-    proximas7: [],
-    proximas30: [],
-    cobradasEsteMes: 0,
-    cuotasPendientes: []
-  };
-
-  ventas.forEach(v => {
-    const cuotas = Array.isArray(v.cuotas) ? v.cuotas : [];
-    cuotas.forEach(c => {
-      if (!c) return;
-      if (c.pagada) {
-        if (isCuotaCobradaEsteMes(c, hoy)) data.cobradasEsteMes++;
-        return;
-      }
-
-      const monto = Number(c.monto || 0);
-      data.totalPendiente += monto;
-      const vence = parseDateSafe(c.vence);
-      const item = { cliente:v.cliente, vendedor:v.vendedor, cuota:c.num, total:v.nCuotas, monto, vence:c.vence, venta:v, cuotaObj:c };
-      data.cuotasPendientes.push(item);
-
-      if (vence && vence < hoy) data.vencidas.push(item);
-      else if (vence && vence >= hoy && vence <= limite7) data.proximas7.push(item);
-      else if (vence && vence > limite7 && vence <= limite30) data.proximas30.push(item);
-    });
-  });
-
-  return data;
 }
 
 // ============================================================
@@ -1632,51 +1537,79 @@ function renderAlertas() {
   const container = document.getElementById('dash-alertas');
   if (!container) return;
 
-  const ventas = JSON.parse(localStorage.getItem('dash_ventas') || '[]');
-  const resumen = getCuotasPendientesData(ventas);
+  const hoy     = new Date(); hoy.setHours(0,0,0,0);
+  const fin7    = new Date(hoy); fin7.setDate(fin7.getDate() + 7);
+  const fin30   = new Date(hoy); fin30.setDate(fin30.getDate() + 30);
   const alertas = [];
 
-  if (resumen.vencidas.length > 0) {
-    const totalVencido = resumen.vencidas.reduce((s,c) => s + c.monto, 0);
+  // ── CUOTAS VENCIDAS (sin cobrar) ────────────────────────
+  const ventas = JSON.parse(localStorage.getItem('dash_ventas') || '[]');
+  const vencidas = [];
+  ventas.forEach(v => {
+    v.cuotas.forEach(c => {
+      if (!c.pagada && c.vence) {
+        const vd = new Date(c.vence); vd.setHours(0,0,0,0);
+        if (vd < hoy) vencidas.push({ cliente:v.cliente, cuota:c.num, total:v.nCuotas, monto:c.monto, vence:c.vence, vendedor:v.vendedor });
+      }
+    });
+  });
+  if (vencidas.length > 0) {
+    const totalVencido = vencidas.reduce((s,c) => s + c.monto, 0);
     alertas.push({
-      tipo: 'urgente',
-      icono: '🔴',
-      titulo: `${resumen.vencidas.length} cuota${resumen.vencidas.length>1?'s':''} vencida${resumen.vencidas.length>1?'s':''} sin cobrar`,
-      desc: resumen.vencidas.slice(0,3).map(c => `${c.cliente} — Cuota ${c.cuota}/${c.total} (venció ${fmtFecha(c.vence)})`).join('\n') + (resumen.vencidas.length > 3 ? `\n+${resumen.vencidas.length-3} más` : ''),
+      tipo: 'urgente', icono: '🔴',
+      titulo: `${vencidas.length} cuota${vencidas.length>1?'s':''} vencida${vencidas.length>1?'s':''} sin cobrar`,
+      desc: vencidas.slice(0,3).map(c => `${c.cliente} — Cuota ${c.cuota}/${c.total} (venció ${fmtFecha(c.vence)})`).join('\n') + (vencidas.length > 3 ? `\n+${vencidas.length-3} más` : ''),
       monto: fmt(totalVencido) + ' pendiente'
     });
   }
 
-  if (resumen.proximas7.length > 0) {
-    const total7 = resumen.proximas7.reduce((s,c) => s + c.monto, 0);
+  // ── CUOTAS QUE VENCEN ESTA SEMANA ───────────────────────
+  const proximas7 = [];
+  ventas.forEach(v => {
+    v.cuotas.forEach(c => {
+      if (!c.pagada && c.vence) {
+        const vd = new Date(c.vence); vd.setHours(0,0,0,0);
+        if (vd >= hoy && vd <= fin7) proximas7.push({ cliente:v.cliente, cuota:c.num, total:v.nCuotas, monto:c.monto, vence:c.vence });
+      }
+    });
+  });
+  if (proximas7.length > 0) {
+    const total7 = proximas7.reduce((s,c) => s + c.monto, 0);
     alertas.push({
-      tipo: 'warning',
-      icono: '⏰',
-      titulo: `${resumen.proximas7.length} cuota${resumen.proximas7.length>1?'s':''} vence${resumen.proximas7.length===1?'':'n'} en 7 días`,
-      desc: resumen.proximas7.slice(0,4).map(c => `${c.cliente} — ${fmtFecha(c.vence)} · Cuota ${c.cuota}/${c.total}`).join('\n') + (resumen.proximas7.length > 4 ? `\n+${resumen.proximas7.length-4} más` : ''),
+      tipo: 'warning', icono: '⏰',
+      titulo: `${proximas7.length} cuota${proximas7.length>1?'s':''} vence${proximas7.length===1?'':'n'} esta semana`,
+      desc: proximas7.map(c => `${c.cliente} — ${fmtFecha(c.vence)} · Cuota ${c.cuota}/${c.total}`).join('\n'),
       monto: fmt(total7) + ' por cobrar'
     });
   }
 
-  if (resumen.proximas30.length > 0) {
-    const total30 = resumen.proximas30.reduce((s,c) => s + c.monto, 0);
+  // ── CUOTAS QUE VENCEN ESTE MES (8-30 días) ──────────────
+  const proximas30 = [];
+  ventas.forEach(v => {
+    v.cuotas.forEach(c => {
+      if (!c.pagada && c.vence) {
+        const vd = new Date(c.vence); vd.setHours(0,0,0,0);
+        if (vd > fin7 && vd <= fin30) proximas30.push({ cliente:v.cliente, cuota:c.num, total:v.nCuotas, monto:c.monto, vence:c.vence });
+      }
+    });
+  });
+  if (proximas30.length > 0) {
+    const total30 = proximas30.reduce((s,c) => s + c.monto, 0);
     alertas.push({
-      tipo: 'info',
-      icono: '📅',
-      titulo: `${resumen.proximas30.length} cuota${resumen.proximas30.length>1?'s':''} próxima${resumen.proximas30.length>1?'s':''} dentro de 30 días`,
-      desc: resumen.proximas30.slice(0,4).map(c => `${c.cliente} — ${fmtFecha(c.vence)} · Cuota ${c.cuota}/${c.total}`).join('\n') + (resumen.proximas30.length > 4 ? `\n+${resumen.proximas30.length-4} más` : ''),
+      tipo: 'info', icono: '📅',
+      titulo: `${proximas30.length} cuota${proximas30.length>1?'s':''} vence${proximas30.length===1?'':'n'} este mes`,
+      desc: proximas30.map(c => `${c.cliente} — ${fmtFecha(c.vence)}`).join('\n'),
       monto: fmt(total30) + ' esperado'
     });
   }
 
-  const hoy = todaySafe();
-  const fin7 = addDaysSafe(hoy, 7);
+  // ── SUSCRIPCIONES QUE VENCEN PRONTO ─────────────────────
   const subsVencen = CACHE.subs.filter(s => {
     if (!s.vence || s.ciclo === 'gratis') return false;
-    const v = parseDateSafe(s.vence);
-    return !!v && v >= hoy && v <= fin7;
+    const v = new Date(s.vence); v.setHours(0,0,0,0);
+    const diff = (v - hoy) / 86400000;
+    return diff >= 0 && diff <= 7;
   });
-
   if (subsVencen.length > 0) {
     alertas.push({
       tipo: 'warning', icono: '🔗',
@@ -1696,7 +1629,7 @@ function renderAlertas() {
       <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px">Alertas del período</div>
       <div class="alertas-grid">
         ${alertas.map(a => `
-          <div class="alerta-card ${a.tipo}" onclick="showSection('cuotas', document.querySelector('.nav-item:nth-child(5)'))">
+          <div class="alerta-card ${a.tipo}" onclick="showSection('${a.tipo==='info'||a.tipo==='warning'?'cuotas':'cuotas'}', document.querySelector('.nav-item:nth-child(5)'))">
             <div class="alerta-icon">${a.icono}</div>
             <div style="flex:1;min-width:0">
               <div class="alerta-titulo">${a.titulo}</div>
@@ -1835,17 +1768,38 @@ function renderChartGastos(porCat) {
 }
 
 function renderChartDonut() {
-  // Widget "Cuotas a cobrar" del Dashboard.
-  // Usa la misma lógica que Alertas y Cuotas para evitar números contradictorios.
+  // Reemplazado por widget de cuotas — actualizar stats
   const ventas = JSON.parse(localStorage.getItem('dash_ventas') || '[]');
-  const resumen = getCuotasPendientesData(ventas);
-  const porVencer30 = resumen.proximas7.length + resumen.proximas30.length;
-
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const finMes = new Date(hoy.getFullYear(), hoy.getMonth()+2, 0);
+  let total = 0, vencidas = 0, proximo = 0, cobradas = 0;
+  const mesActual = hoy.getMonth(), anioActual = hoy.getFullYear();
+  ventas.forEach(v => {
+    const cobradoEnCuotas = (v.cuotas||[]).filter(c=>c.pagada).reduce((s,c)=>s+(c.montoCobrado||c.monto),0);
+    const saldoReal = Math.max(0, v.total - (v.adelanto||0) - cobradoEnCuotas);
+    total += saldoReal;
+    (v.cuotas||[]).forEach(c => {
+      if (c.pagada) {
+        if (c.fechaCobro) {
+          const fc = new Date(c.fechaCobro+'T00:00:00');
+          if (fc.getMonth()===mesActual && fc.getFullYear()===anioActual) cobradas++;
+        }
+      } else if (c.vence) {
+        const pts = c.vence.split('/');
+        if (pts.length===3) {
+          const [d,m,y] = pts.map(Number);
+          const vd = new Date(y,m-1,d); vd.setHours(0,0,0,0);
+          if (vd < hoy) vencidas++;
+          else if (vd <= finMes) proximo++;
+        }
+      }
+    });
+  });
   const el = id => document.getElementById(id);
-  if (el('dcs-total'))    el('dcs-total').textContent    = fmt(resumen.totalPendiente);
-  if (el('dcs-vencidas')) el('dcs-vencidas').textContent = resumen.vencidas.length;
-  if (el('dcs-proximo'))  el('dcs-proximo').textContent  = porVencer30;
-  if (el('dcs-cobradas')) el('dcs-cobradas').textContent = resumen.cobradasEsteMes;
+  if (el('dcs-total'))    el('dcs-total').textContent    = fmt(total);
+  if (el('dcs-vencidas')) el('dcs-vencidas').textContent = vencidas;
+  if (el('dcs-proximo'))  el('dcs-proximo').textContent  = proximo;
+  if (el('dcs-cobradas')) el('dcs-cobradas').textContent = cobradas;
 }
 
 // ============================================================
@@ -1938,11 +1892,25 @@ async function saveVenta() {
   const total      = parseFloat(document.getElementById('v-total').value) || 0;
   const adelanto   = parseFloat(document.getElementById('v-adelanto').value) || 0;
   const nCuotas    = parseInt(document.getElementById('v-cuotas').value) || 1;
-  const metodoPago = document.getElementById('v-metodo-pago').value;
+  const cuentaIdSel= document.getElementById('v-metodo-pago').value;
   const primerVenc = document.getElementById('v-primer-venc').value;
   const notas      = document.getElementById('v-notas').value.trim();
 
   if (!cliente || !total) { showToast('Completá cliente y precio total','err'); return; }
+
+  // Get cuenta info
+  let metodoPago = '';
+  let cuentaId = '';
+  if (cuentaIdSel) {
+    const cuenta = getCuentas().find(c => c.id === cuentaIdSel);
+    if (cuenta) {
+      metodoPago = cuenta.nombre;
+      cuentaId = cuenta.id;
+    } else {
+      // Es una opción genérica (sin cuentas creadas)
+      metodoPago = cuentaIdSel;
+    }
+  }
 
   const saldo = total - adelanto;
   const porCuota = nCuotas > 0 ? saldo / nCuotas : saldo;
@@ -1968,29 +1936,9 @@ async function saveVenta() {
         const d = parseFechaLocal(fecha);
         CACHE.ingresos.unshift({ id:res.id, fecha, nombre:cliente, concepto:`Adelanto - ${producto}`, monto:adelanto, vendedor, esVenta:true, mes:d.mes, anio:d.anio });
         
-        // Registrar adelanto en tesorería
-        const cuentaAuto = matchCuentaByMetodo(metodoPago);
-        if (cuentaAuto) {
-          registrarEnTesoreria(cuentaAuto.id, fecha, `Adelanto - ${cliente} (${producto})`, adelanto);
-        } else {
-          // No encontró cuenta automática — preguntar
-          const cuentas = getCuentas();
-          if (cuentas.length) {
-            const optsHtml = cuentas.map(c => `<option value="${c.id}">${c.emoji||'💵'} ${c.nombre}</option>`).join('');
-            const elegida = await new Promise(resolve => {
-              const div = document.createElement('div');
-              div.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;z-index:9999;display:flex;align-items:center;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,.4)';
-              div.innerHTML = `<span style="font-size:13px;color:var(--text)">¿Registrar adelanto de ${fmt(adelanto)} en tesorería?</span>
-                <select id="_teso-sel" style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px">
-                  <option value="">— No registrar —</option>${optsHtml}
-                </select>
-                <button onclick="const v=document.getElementById('_teso-sel').value;this.closest('div').remove();window._tesoResolve(v)" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer">Confirmar</button>`;
-              window._tesoResolve = resolve;
-              document.body.appendChild(div);
-              setTimeout(() => { if(div.isConnected){div.remove();resolve('');} }, 15000);
-            });
-            if (elegida) registrarEnTesoreria(elegida, fecha, `Adelanto - ${cliente} (${producto})`, adelanto);
-          }
+        // Registrar adelanto en tesorería automáticamente si eligió cuenta
+        if (cuentaId) {
+          await registrarEnTesoreria(cuentaId, fecha, `Adelanto - ${cliente} (${producto})`, adelanto);
         }
       }
     }
@@ -2215,40 +2163,43 @@ async function deleteGasto(id) {
 // ============================================================
 function renderCuotas() {
   const ventas = JSON.parse(localStorage.getItem('dash_ventas') || '[]');
-  const hoy = todaySafe();
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
   const container = document.getElementById('ventas-cuotas-list');
-  const resumen = getCuotasPendientesData(ventas);
-  let cuotasVencidas = 0, cuotasCobradas = 0, cuotasPorVencer = 0;
-
+  let totalPorCobrar = 0, cuotasVencidas = 0, cuotasCobradas = 0, cuotasPorVencer = 0;
+  const hoyVencer = new Date();
+  const en15dias = new Date(hoyVencer.getTime() + 15 * 24 * 60 * 60 * 1000);
   if (!ventas.length) {
     container.innerHTML = '<div class="empty">Sin ventas con cuotas registradas.<br>Usá "Nueva venta" para registrar una.</div>';
     document.getElementById('cuota-total').textContent = fmt(0);
     document.getElementById('cuota-vencidas').textContent = '0';
     document.getElementById('cuota-cobradas').textContent = '0';
-    document.getElementById('cuota-por-vencer').textContent = '0';
     return;
   }
-
   const html = ventas.map(v => {
-    const cuotas = Array.isArray(v.cuotas) ? v.cuotas : [];
-    const pendientes = cuotas.filter(c => !c.pagada);
-    const cobradoEnCuotas = cuotas.filter(c => c.pagada).reduce((s,c) => s + (c.montoCobrado||c.monto), 0);
+    const pendientes = v.cuotas.filter(c => !c.pagada);
+    const cobradoEnCuotas = v.cuotas.filter(c => c.pagada).reduce((s,c) => s + (c.montoCobrado||c.monto), 0);
     const saldoReal = Math.max(0, v.total - (v.adelanto||0) - cobradoEnCuotas);
+    const subtotal = pendientes.length > 0
+      ? pendientes.reduce((s,c) => s + c.monto, 0)
+      : saldoReal;
+    totalPorCobrar += subtotal;
     const porcentaje = saldoReal === 0 ? 100 : v.nCuotas > 0 ? Math.round(((v.nCuotas - pendientes.length) / v.nCuotas) * 100) : 100;
-
-    const cuotasHtml = cuotas.map((c,i) => {
+    const cuotasHtml = v.cuotas.map((c,i) => {
       let estado = 'pendiente';
-      if (c.pagada) {
-        estado = 'pagada';
-        if (isCuotaCobradaEsteMes(c, hoy)) cuotasCobradas++;
-      } else if (isCuotaVencida(c, hoy)) {
-        estado = 'vencida';
-        cuotasVencidas++;
-      } else if (isCuotaPorVencer(c, 15, hoy)) {
-        estado = 'por-vencer';
-        cuotasPorVencer++;
+      if (c.pagada) { estado='pagada'; cuotasCobradas++; }
+      else if (c.vence) {
+        const pts = c.vence.split('/');
+        let vd;
+        if (pts.length === 3) {
+          const [dd,mm,yy] = pts.map(Number);
+          vd = new Date(yy, mm-1, dd);
+        } else {
+          vd = new Date(c.vence);
+        }
+        vd.setHours(0,0,0,0);
+        if (vd < hoy) { estado='vencida'; cuotasVencidas++; }
+        else if (vd <= en15dias) { estado='por-vencer'; cuotasPorVencer++; }
       }
-
       const infoExtra = c.pagada
         ? `<div class="cobro-info">${c.metodo||''}${c.notas ? ' · ' + c.notas : ''}${c.fechaCobro ? ' · ' + fmtFecha(c.fechaCobro) : ''}${c.montoCobrado && c.montoCobrado !== c.monto ? ' · Cobrado: '+fmt(c.montoCobrado) : ''}</div>`
         : (c._ajuste ? `<div class="cobro-info" style="color:var(--orange)">⚡ ${c._ajuste}</div>` : '');
@@ -2267,11 +2218,19 @@ function renderCuotas() {
           ${acciones}
         </div>`;
     }).join('');
-
-    const tieneVencidas = cuotas.some(c => isCuotaVencida(c, hoy));
     const notasHtml = v.notas ? `<div style="margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:6px;font-size:11px;color:var(--muted)">${v.notas}</div>` : '';
     return `
-      <div class="venta-card ${(saldoReal > 0 || tieneVencidas) ? 'pendiente' : ''}">
+      <div class="venta-card ${(() => {
+              const hoy = new Date();
+              const tieneVencidas = v.cuotas.some(c => {
+                if (!c || !c.vence || c.pagada) return false;
+                const pts = c.vence.split('/');
+                if (pts.length !== 3) return false;
+                const [dd, mm, yy] = pts.map(Number);
+                return new Date(yy, mm-1, dd) < new Date();
+              });
+              return (saldoReal > 0 || tieneVencidas) ? 'pendiente' : '';
+            })()}">
         <div class="venta-header">
           <div>
             <div class="venta-cliente">${v.cliente}${saldoReal > 0 ? ' <span style="color:var(--red);font-size:11px;font-weight:600">⚠️ Saldo: '+fmt(saldoReal)+'</span>' : ''}</div>
@@ -2279,7 +2238,11 @@ function renderCuotas() {
           </div>
           <div style="display:flex;gap:8px;align-items:center">
             <span class="tag tag-gold">${fmt(v.total)}</span>
-            ${saldoReal > 0 ? `<button class="btn-icon" onclick="pagarSaldo('${v.id}')" title="Pagar saldo pendiente" style="color:var(--red);border-color:rgba(231,76,60,0.4);padding:6px 12px;width:auto;font-size:11px;font-weight:600">Pagar $${Math.round(saldoReal)}</button>` : ''}
+            ${(() => {
+              const cobradoEnCuotas = v.cuotas.filter(c => c.pagada).reduce((s,c) => s + (c.montoCobrado||c.monto), 0);
+              const saldoReal = Math.max(0, v.total - (v.adelanto||0) - cobradoEnCuotas);
+              return saldoReal > 0 ? `<button class="btn-icon" onclick="pagarSaldo('${v.id}')" title="Pagar saldo pendiente" style="color:var(--red);border-color:rgba(231,76,60,0.4);padding:6px 12px;width:auto;font-size:11px;font-weight:600">Pagar $${Math.round(saldoReal)}</button>` : '';
+            })()}
             <button class="btn-icon edit" onclick="agregarNotaVenta('${v.id}')" title="Notas">✎</button>
             <button class="btn-icon" onclick="generarReciboPDF('${v.id}')" title="Descargar recibo PDF" style="color:var(--accent);border-color:rgba(37,99,235,0.3)">⬇</button>
             <button class="btn-icon" onclick="eliminarVenta('${v.id}')" title="Eliminar">✕</button>
@@ -2295,24 +2258,21 @@ function renderCuotas() {
         ${notasHtml}
       </div>`;
   }).join('');
-
   container.innerHTML = html;
-  document.getElementById('cuota-total').textContent = fmt(resumen.totalPendiente);
+  document.getElementById('cuota-total').textContent = fmt(totalPorCobrar);
   document.getElementById('cuota-vencidas').textContent = cuotasVencidas;
   document.getElementById('cuota-cobradas').textContent = cuotasCobradas;
   document.getElementById('cuota-por-vencer').textContent = cuotasPorVencer;
 
+  // Color dinámico del indicador
   const cardVencer = document.getElementById('cuota-por-vencer-card');
   const valVencer = document.getElementById('cuota-por-vencer');
   if (cuotasVencidas > 0) {
-    cardVencer.style.borderTopColor = 'var(--red)';
-    valVencer.style.color = 'var(--red)';
+    cardVencer.style.borderTopColor = 'var(--red)'; valVencer.style.color = 'var(--red)';
   } else if (cuotasPorVencer > 0) {
-    cardVencer.style.borderTopColor = '#FF9500';
-    valVencer.style.color = '#FF9500';
+    cardVencer.style.borderTopColor = '#FF9500'; valVencer.style.color = '#FF9500';
   } else {
-    cardVencer.style.borderTopColor = 'var(--green)';
-    valVencer.style.color = 'var(--green)';
+    cardVencer.style.borderTopColor = 'var(--green)'; valVencer.style.color = 'var(--green)';
   }
 }
 
@@ -2980,36 +2940,18 @@ function actualizarInfoTasa() {
 }
 function getCuentas()       { return CACHE.cuentas || []; }
 function getMovimientos()   { return CACHE.movimientos || []; }
-function loadCuentasLocal() { return JSON.parse(localStorage.getItem('tesoreria_cuentas') || '[]'); }
-function loadMovsLocal()    { return JSON.parse(localStorage.getItem('tesoreria_movs') || '[]'); }
-function saveCuentasLocal(cuentas) { localStorage.setItem('tesoreria_cuentas', JSON.stringify(cuentas || [])); }
-function saveMovsLocal(movs)       { localStorage.setItem('tesoreria_movs', JSON.stringify(movs || [])); }
-function makeLocalId(prefix) { return prefix + '_' + Date.now() + '_' + Math.random().toString(36).slice(2,8); }
-
 async function loadTesoreriaFromSheet() {
   try {
     const [rCtas, rMovs] = await Promise.all([
       api({ action: 'getCuentas' }),
       api({ action: 'getMovimientos' })
     ]);
-
-    if (rCtas && rCtas.ok && Array.isArray(rCtas.data)) {
-      CACHE.cuentas = rCtas.data;
-      saveCuentasLocal(CACHE.cuentas);
-    } else {
-      CACHE.cuentas = loadCuentasLocal();
-    }
-
-    if (rMovs && rMovs.ok && Array.isArray(rMovs.data)) {
-      CACHE.movimientos = rMovs.data;
-      saveMovsLocal(CACHE.movimientos);
-    } else {
-      CACHE.movimientos = loadMovsLocal();
-    }
+    CACHE.cuentas = rCtas.data || [];
+    CACHE.movimientos = rMovs.data || [];
   } catch(e) {
-    console.warn('Tesorería usando localStorage porque el Sheet/API no respondió:', e);
-    CACHE.cuentas = loadCuentasLocal();
-    CACHE.movimientos = loadMovsLocal();
+    console.error('Error cargando tesorería:', e);
+    CACHE.cuentas = [];
+    CACHE.movimientos = [];
   }
 }
 
@@ -3144,7 +3086,6 @@ function toggleMovTipo() {
 async function saveCuenta() {
   const nombre = document.getElementById('cta-nombre').value.trim();
   if (!nombre) { showToast('Ingresá el nombre','err'); return; }
-
   const c = {
     nombre,
     emoji:  document.getElementById('cta-emoji').value.trim() || '💵',
@@ -3153,50 +3094,34 @@ async function saveCuenta() {
     saldoInicial: parseFloat(document.getElementById('cta-saldo').value) || 0,
     desc:   document.getElementById('cta-desc').value.trim()
   };
-
   try {
     const res = await api({ action: 'addCuenta', ...c });
-    const nuevaCuenta = { ...c, id: (res && res.ok && res.id) ? res.id : makeLocalId('CTA') };
-    CACHE.cuentas.push(nuevaCuenta);
-    saveCuentasLocal(CACHE.cuentas);
-    renderTesoreria();
-    showToast('Cuenta agregada ✓','ok');
-    closeModal('cuenta');
-    clearForm(['cta-nombre','cta-emoji','cta-saldo','cta-desc']);
+    if (res.ok) {
+      CACHE.cuentas.push({ ...c, id: res.id });
+      renderTesoreria();
+      showToast('Cuenta agregada ✓','ok');
+      closeModal('cuenta');
+      clearForm(['cta-nombre','cta-emoji','cta-saldo','cta-desc']);
+    } else {
+      showToast('Error al guardar','err');
+    }
   } catch(e) {
-    const nuevaCuenta = { ...c, id: makeLocalId('CTA') };
-    CACHE.cuentas.push(nuevaCuenta);
-    saveCuentasLocal(CACHE.cuentas);
-    renderTesoreria();
-    showToast('Cuenta guardada localmente ✓','ok');
-    closeModal('cuenta');
-    clearForm(['cta-nombre','cta-emoji','cta-saldo','cta-desc']);
+    showToast('Error de conexión','err');
   }
 }
 
 async function deleteCuenta(id) {
   if (!confirm('¿Eliminar esta cuenta? Se perderán los movimientos asociados.')) return;
-
-  const borrarLocal = () => {
-    CACHE.cuentas = CACHE.cuentas.filter(c => c.id !== id);
-    CACHE.movimientos = CACHE.movimientos.filter(m => m.cuentaId !== id && m.cuentaDestId !== id);
-    saveCuentasLocal(CACHE.cuentas);
-    saveMovsLocal(CACHE.movimientos);
-    renderTesoreria();
-  };
-
   try {
     const res = await api({ action: 'deleteCuenta', id });
-    if (res && res.ok) {
-      borrarLocal();
+    if (res.ok) {
+      CACHE.cuentas = CACHE.cuentas.filter(c => c.id !== id);
+      CACHE.movimientos = CACHE.movimientos.filter(m => m.cuentaId !== id && m.cuentaDestId !== id);
+      renderTesoreria();
       showToast('Cuenta eliminada','ok');
-    } else {
-      borrarLocal();
-      showToast('Cuenta eliminada localmente','ok');
     }
   } catch(e) {
-    borrarLocal();
-    showToast('Cuenta eliminada localmente','ok');
+    showToast('Error al eliminar','err');
   }
 }
 
@@ -3207,53 +3132,33 @@ async function saveMovimiento() {
   const cuentaDestId = document.getElementById('mov-cuenta-dest').value;
   const desc       = document.getElementById('mov-desc').value.trim();
   const monto      = parseFloat(document.getElementById('mov-monto').value);
-
   if (!monto || !cuentaId) { showToast('Completá los campos requeridos','err'); return; }
-  if (tipo==='transferencia' && (!cuentaDestId || cuentaId===cuentaDestId)) { showToast('Elegí dos cuentas diferentes','err'); return; }
-
-  const mov = { tipo, fecha, cuentaId, cuentaDestId, desc, monto };
-
+  if (tipo==='transferencia' && cuentaId===cuentaDestId) { showToast('Las cuentas deben ser diferentes','err'); return; }
   try {
-    const res = await api({ action: 'addMovimiento', ...mov });
-    const nuevoMov = { ...mov, id: (res && res.ok && res.id) ? res.id : makeLocalId('MOV') };
-    CACHE.movimientos.push(nuevoMov);
-    saveMovsLocal(CACHE.movimientos);
-    renderTesoreria();
-    showToast('Movimiento registrado ✓','ok');
-    closeModal('movimiento');
-    clearForm(['mov-desc','mov-monto']);
+    const res = await api({ action: 'addMovimiento', tipo, fecha, cuentaId, cuentaDestId, desc, monto });
+    if (res.ok) {
+      CACHE.movimientos.push({ id: res.id, tipo, fecha, cuentaId, cuentaDestId, desc, monto });
+      renderTesoreria();
+      showToast('Movimiento registrado ✓','ok');
+      closeModal('movimiento');
+      clearForm(['mov-desc','mov-monto']);
+    }
   } catch(e) {
-    const nuevoMov = { ...mov, id: makeLocalId('MOV') };
-    CACHE.movimientos.push(nuevoMov);
-    saveMovsLocal(CACHE.movimientos);
-    renderTesoreria();
-    showToast('Movimiento guardado localmente ✓','ok');
-    closeModal('movimiento');
-    clearForm(['mov-desc','mov-monto']);
+    showToast('Error al guardar','err');
   }
 }
 
 async function deleteMovimiento(id) {
   if (!confirm('¿Eliminar este movimiento?')) return;
-
-  const borrarLocal = () => {
-    CACHE.movimientos = CACHE.movimientos.filter(m => m.id !== id);
-    saveMovsLocal(CACHE.movimientos);
-    renderTesoreria();
-  };
-
   try {
     const res = await api({ action: 'deleteMovimiento', id });
-    if (res && res.ok) {
-      borrarLocal();
+    if (res.ok) {
+      CACHE.movimientos = CACHE.movimientos.filter(m => m.id !== id);
+      renderTesoreria();
       showToast('Eliminado','ok');
-    } else {
-      borrarLocal();
-      showToast('Eliminado localmente','ok');
     }
   } catch(e) {
-    borrarLocal();
-    showToast('Eliminado localmente','ok');
+    showToast('Error al eliminar','err');
   }
 }
 
@@ -3338,47 +3243,29 @@ function importarDatos(event) {
   event.target.value = '';
 }
 
-async function restaurarFactory() {
-  if (!confirm('⚠️ ¿Restaurar de fábrica?\nSe borrarán TODOS los datos del navegador Y del Google Sheet:\n- Ingresos\n- Gastos\n- Equipo\n- Suscripciones\n- Cuentas\n- Movimientos\n- Ventas/cuotas locales\n\nEsta acción no se puede deshacer.')) return;
+function restaurarFactory() {
+  if (!confirm('⚠️ ¿Restaurar de fábrica?\nSe borrarán TODOS los datos: locales Y del Google Sheet (ingresos, gastos, equipo).\n\nEsta acción no se puede deshacer.')) return;
   if (!confirm('Última confirmación. ¿Borrar absolutamente todo?')) return;
-
-  showToast('Restaurando... limpiando Google Sheet', 'ok');
-
-  const tokenBackup = TOKEN || localStorage.getItem('dash_token') || '';
-
-  try {
-    const res = await api({ action:'clearAllData' });
-    console.log('clearAllData result:', res);
-
-    if (!res || res.ok !== true) {
-      showToast('El backend no limpió el Sheet. Revisá consola.', 'err');
-      console.error('clearAllData falló:', res);
-      alert('No se pudo limpiar el Sheet. Causa probable: Apps Script no está actualizado/deployado con clearAllData.');
-      return;
-    }
-
-    localStorage.clear();
-    if (tokenBackup) {
-      TOKEN = tokenBackup;
-      localStorage.setItem('dash_token', tokenBackup);
-    }
-
-    CACHE.ingresos = [];
-    CACHE.gastos = [];
-    CACHE.equipo = [];
-    CACHE.subs = [];
-    CACHE.ventas = [];
-    CACHE.cuentas = [];
-    CACHE.movimientos = [];
-
-    showToast('Todo restaurado correctamente ✓', 'ok');
-    setTimeout(() => location.reload(), 900);
-
-  } catch (err) {
-    console.error('Error restaurando de fábrica:', err);
-    showToast('Error restaurando. Revisá consola.', 'err');
-    alert('Error restaurando. Abrí consola y mirá el error.');
-  }
+  showToast('Restaurando... puede tardar unos segundos','ok');
+  LOCAL_KEYS.forEach(k => localStorage.removeItem(k));
+  localStorage.clear(); // borrar absolutamente todo
+  CACHE.subs = []; CACHE.ventas = []; CACHE.ingresos = []; CACHE.gastos = []; CACHE.equipo = [];
+  const borrarSheet = async () => {
+    const [rIng, rGas, rEq] = await Promise.all([
+      api({ action:'getIngresos', mes:'', anio:'' }),
+      api({ action:'getGastos',   mes:'', anio:'' }),
+      api({ action:'getEquipo' })
+    ]);
+    await Promise.all([
+      ...(rIng.data||[]).map(r => api({ action:'deleteIngreso', id:r.id })),
+      ...(rGas.data||[]).map(r => api({ action:'deleteGasto',   id:r.id })),
+      ...(rEq.data||[]).map(r => api({ action:'deleteMiembro',  id:r.id })),
+    ]);
+    CACHE.ingresos = []; CACHE.gastos = []; CACHE.equipo = [];
+    showToast('Todo restaurado — recargando...','ok');
+    setTimeout(() => location.reload(), 1200);
+  };
+  borrarSheet().catch(() => { showToast('Error limpiando el Sheet','err'); setTimeout(()=>location.reload(),1500); });
 }
 
 function limpiarDatosPrueba() {
@@ -3387,301 +3274,303 @@ function limpiarDatosPrueba() {
 }
 
 async function cargarDatosPrueba() {
-  if (!confirm('¿Cargar escenario de prueba $750.000?\nEsto borrará todos los datos actuales (locales y del Sheet).')) return;
-
-  showToast('🧹 Limpiando datos anteriores...', 'ok');
-
-  // Limpiar Sheet primero con acción atómica del backend
+  if (!confirm('¿Cargar escenario de prueba $155k?\nEsto borrará todos los datos actuales (locales y del Sheet).')) return;
+  
+  showToast('🧹 Limpiando datos anteriores...','ok');
+  
+  // Limpiar Sheet primero
   try {
-    const clearRes = await api({ action:'clearAllData' });
-    console.log('clearAllData antes de escenario:', clearRes);
-    if (!clearRes || clearRes.ok !== true) {
-      showToast('No se pudo limpiar el Sheet antes de cargar escenario', 'err');
-      console.error('clearAllData falló:', clearRes);
-      return;
-    }
-  } catch(e) {
-    console.warn('Error limpiando Sheet:', e);
-    showToast('Error limpiando Sheet antes del escenario', 'err');
-    return;
-  }
-
-  // Limpiar localStorage sin romper el token actual en memoria
+    const [rIng, rGas, rEq] = await Promise.all([
+      api({ action:'getIngresos', mes:'', anio:'' }),
+      api({ action:'getGastos',   mes:'', anio:'' }),
+      api({ action:'getEquipo' })
+    ]);
+    await Promise.all([
+      ...(rIng.data||[]).map(r => api({ action:'deleteIngreso', id:r.id })),
+      ...(rGas.data||[]).map(r => api({ action:'deleteGasto',   id:r.id })),
+      ...(rEq.data||[]).map(r => api({ action:'deleteMiembro',  id:r.id })),
+    ]);
+  } catch(e) { console.warn('Error limpiando Sheet:', e); }
+  
+  // Limpiar localStorage
   localStorage.clear();
-  CACHE.ingresos = [];
-  CACHE.gastos = [];
-  CACHE.equipo = [];
-  CACHE.subs = [];
-  CACHE.ventas = [];
-  CACHE.cuentas = [];
-  CACHE.movimientos = [];
-
-  showToast('📦 Cargando escenario operativo $750k...', 'ok');
+  CACHE.ingresos = []; CACHE.gastos = []; CACHE.equipo = []; CACHE.subs = []; CACHE.ventas = [];
+  
+  showToast('📦 Cargando escenario $155k...','ok');
 
   const now = new Date();
+  const fd = (y,m,d) => `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  const fv = (y,m,d) => `${String(d).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`;
   const MESES_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  const fd = (date) => {
-    const d = new Date(date);
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  };
-  const fv = (date) => {
-    const d = new Date(date);
-    return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
-  };
-  const day = (d) => new Date(now.getFullYear(), now.getMonth(), d);
-  const addMonths = (date, months) => new Date(date.getFullYear(), date.getMonth() + months, date.getDate());
-  const pm = f => {
-    const d = new Date(String(f).split('T')[0] + 'T00:00:00');
-    return { mes: MESES_ES[d.getMonth()], anio: d.getFullYear() };
-  };
+  const pm = f => { const d=new Date(f+'T00:00:00'); return { mes:MESES_ES[d.getMonth()], anio:d.getFullYear() }; };
+  const y = now.getFullYear(), m = now.getMonth()+1;
+  const pm1 = m===1?12:m-1, pm2 = m<=2?m+10:m-2, pm3 = m<=3?m+9:m-3;
+  const py1 = m===1?y-1:y, py2 = m<=2?y-1:y, py3 = m<=3?y-1:y;
+  const nm = (m) => m > 12 ? m - 12 : m;
 
-  // ── EQUIPO: 15 personas cubriendo todos los puestos ─────────────────
+  // ── EQUIPO ──────────────────────────────────────────────────────────
   const equipoData = [
-    { nombre:'Frank', rol:'CEO / Socio principal', tipo:'restante', valor:0 },
-    { nombre:'Tomas', rol:'Integrador / Operaciones', tipo:'revenue_pct', valor:15 },
-    { nombre:'Eveling', rol:'Closer Senior', tipo:'vendedor', valor:10 },
-    { nombre:'Sofia', rol:'Closer Junior', tipo:'vendedor', valor:7 },
-    { nombre:'Mateo', rol:'Setter WhatsApp / DM', tipo:'fijo', valor:3200 },
-    { nombre:'Camila', rol:'Account Manager', tipo:'fijo', valor:4500 },
-    { nombre:'Lucas', rol:'Filmmaker Miami', tipo:'fijo', valor:6500 },
-    { nombre:'Valentina', rol:'Filmmaker Orlando', tipo:'fijo', valor:5200 },
-    { nombre:'Nicolas', rol:'Editor Senior', tipo:'fijo', valor:4800 },
-    { nombre:'Martina', rol:'Editora Reels', tipo:'fijo', valor:3600 },
-    { nombre:'Bruno', rol:'Media Buyer Meta Ads', tipo:'fijo', valor:5500 },
-    { nombre:'Agustina', rol:'Copywriter / Scripts', tipo:'fijo', valor:3000 },
-    { nombre:'Joaquin', rol:'Diseño / Motion Graphics', tipo:'fijo', valor:2800 },
-    { nombre:'Florencia', rol:'Customer Success', tipo:'fijo', valor:3500 },
-    { nombre:'Diego', rol:'Automatizaciones / GHL', tipo:'fijo', valor:4200 }
+    { nombre:'Frank',   rol:'CEO / Socio',    tipo:'restante',    valor:0   },
+    { nombre:'Tomas',   rol:'Integrador',     tipo:'revenue_pct', valor:15  },
+    { nombre:'Eveling', rol:'Closer',         tipo:'vendedor',    valor:10  },
   ];
-
-  const eqRes = await Promise.all(equipoData.map(m => api({ action:'addMiembro', ...m, activo:true })));
-  CACHE.equipo = equipoData.map((m,i) => ({ ...m, id:eqRes[i].id, activo:true }));
+  const eqRes = await Promise.all(equipoData.map(m2 => api({ action:'addMiembro', ...m2, activo:true })));
+  CACHE.equipo = equipoData.map((m2,i) => ({ ...m2, id:eqRes[i].id, activo:true }));
   fillVendedorSelects();
 
-  // ── CUENTAS DE TESORERÍA ────────────────────────────────────────────
-  const cuentas = [
-    { id:'CTA_WISE', nombre:'Wise USD', emoji:'💸', tipo:'digital', moneda:'USD', saldoInicial:0, desc:'Cobros internacionales' },
-    { id:'CTA_PAYPAL', nombre:'PayPal', emoji:'🅿️', tipo:'digital', moneda:'USD', saldoInicial:0, desc:'Cobros PayPal' },
-    { id:'CTA_BANK', nombre:'Bank of America', emoji:'🏦', tipo:'banco', moneda:'USD', saldoInicial:0, desc:'Cuenta bancaria principal' },
-    { id:'CTA_CASH', nombre:'Efectivo USD', emoji:'💵', tipo:'efectivo', moneda:'USD', saldoInicial:0, desc:'Caja chica' },
-    { id:'CTA_CARD', nombre:'Tarjeta empresa', emoji:'💳', tipo:'tarjeta', moneda:'USD', saldoInicial:0, desc:'Pagos operativos' },
-    { id:'CTA_USDT', nombre:'USDT Wallet', emoji:'₿', tipo:'crypto', moneda:'USDT', saldoInicial:0, desc:'Cobros crypto' },
-    { id:'CTA_ARS', nombre:'Banco Argentina ARS', emoji:'🇦🇷', tipo:'banco', moneda:'ARS', saldoInicial:0, desc:'Gastos locales' }
+  // ── INGRESOS SHEET (adelantos + cuotas cobradas) ─────────────────────
+  // MES ACTUAL: ~$155.000 en ventas
+  const ingRaw = [
+    // MES ACTUAL — ventas nuevas (adelantos)
+    { nombre:'Michael Carter',   concepto:'Adelanto - Opción 2 Full Service',    monto:5000,  fecha:fd(y,m,2),   vendedor:'Eveling', esVenta:true },
+    { nombre:'Jennifer Walsh',   concepto:'Adelanto - Opción 2 Full Service',    monto:4000,  fecha:fd(y,m,3),   vendedor:'Eveling', esVenta:true },
+    { nombre:'David Chen',       concepto:'Adelanto - Opción 1 Content Pro',     monto:2000,  fecha:fd(y,m,4),   vendedor:'Eveling', esVenta:true },
+    { nombre:'Sarah Johnson',    concepto:'Adelanto - Opción 2 Full Service',    monto:6000,  fecha:fd(y,m,5),   vendedor:'Eveling', esVenta:true },
+    { nombre:'Robert Martinez',  concepto:'Adelanto - Opción 1 Content Pro',     monto:1500,  fecha:fd(y,m,6),   vendedor:'Eveling', esVenta:true },
+    { nombre:'Lisa Thompson',    concepto:'Adelanto - Opción 2 Full Service',    monto:5000,  fecha:fd(y,m,8),   vendedor:'Eveling', esVenta:true },
+    { nombre:'James Anderson',   concepto:'Adelanto - Opción 1 Content Pro',     monto:2000,  fecha:fd(y,m,9),   vendedor:'Eveling', esVenta:true },
+    { nombre:'Amanda Foster',    concepto:'Adelanto - Opción 2 Full Service',    monto:4500,  fecha:fd(y,m,10),  vendedor:'Eveling', esVenta:true },
+    { nombre:'Kevin Brooks',     concepto:'Adelanto - Opción 1 Content Pro',     monto:1500,  fecha:fd(y,m,11),  vendedor:'Eveling', esVenta:true },
+    { nombre:'Nancy Cooper',     concepto:'Adelanto - Opción 2 Full Service',    monto:5500,  fecha:fd(y,m,12),  vendedor:'Eveling', esVenta:true },
+    // Cuotas cobradas mes actual
+    { nombre:'Thomas Grant',     concepto:'Cuota 2/3 - Opción 2 Full Service',   monto:4000,  fecha:fd(y,m,3),   vendedor:'Eveling', esVenta:true },
+    { nombre:'Rachel Kim',       concepto:'Cuota 2/2 - Opción 1 Content Pro',    monto:1500,  fecha:fd(y,m,4),   vendedor:'Eveling', esVenta:true },
+    { nombre:'Carlos Rivera',    concepto:'Cuota 3/3 - Opción 2 Full Service',   monto:4000,  fecha:fd(y,m,7),   vendedor:'Eveling', esVenta:true },
+    { nombre:'Linda Park',       concepto:'Saldo pendiente - Opción 1',          monto:1499,  fecha:fd(y,m,10),  vendedor:'Eveling', esVenta:true },
+    { nombre:'Brian Stone',      concepto:'Cuota 2/2 - Opción 2 Full Service',   monto:5999,  fecha:fd(y,m,13),  vendedor:'Eveling', esVenta:true },
+    // Ingresos simples
+    { nombre:'Consultoría estrategia', concepto:'Sesión consultoría 1-1',        monto:800,   fecha:fd(y,m,6),   vendedor:'Frank', esVenta:false },
+    { nombre:'Referral fee',           concepto:'Comisión referido James',        monto:500,   fecha:fd(y,m,9),   vendedor:'Tomas', esVenta:false },
+    // MES -1
+    { nombre:'Thomas Grant',     concepto:'Adelanto - Opción 2 Full Service',    monto:3999,  fecha:fd(py1,pm1,5),  vendedor:'Eveling', esVenta:true },
+    { nombre:'Rachel Kim',       concepto:'Adelanto - Opción 1 Content Pro',     monto:1499,  fecha:fd(py1,pm1,7),  vendedor:'Eveling', esVenta:true },
+    { nombre:'Carlos Rivera',    concepto:'Adelanto - Opción 2 Full Service',    monto:3999,  fecha:fd(py1,pm1,10), vendedor:'Eveling', esVenta:true },
+    { nombre:'Linda Park',       concepto:'Adelanto - Opción 1 Content Pro',     monto:1500,  fecha:fd(py1,pm1,12), vendedor:'Eveling', esVenta:true },
+    { nombre:'Brian Stone',      concepto:'Adelanto - Opción 2 Full Service',    monto:3999,  fecha:fd(py1,pm1,15), vendedor:'Eveling', esVenta:true },
+    // MES -2
+    { nombre:'Patricia Nguyen',  concepto:'Adelanto - Opción 2 Full Service',    monto:3999,  fecha:fd(py2,pm2,3),  vendedor:'Eveling', esVenta:true },
+    { nombre:'Mark Williams',    concepto:'Adelanto - Opción 1 Content Pro',     monto:1499,  fecha:fd(py2,pm2,8),  vendedor:'Eveling', esVenta:true },
+    { nombre:'Sandra Lee',       concepto:'Adelanto - Opción 2 Full Service',    monto:3999,  fecha:fd(py2,pm2,12), vendedor:'Eveling', esVenta:true },
+    // MES -3
+    { nombre:'George Harris',    concepto:'Adelanto - Opción 1 Content Pro',     monto:1499,  fecha:fd(py3,pm3,4),  vendedor:'Eveling', esVenta:true },
+    { nombre:'Helen Turner',     concepto:'Adelanto - Opción 2 Full Service',    monto:3999,  fecha:fd(py3,pm3,8),  vendedor:'Eveling', esVenta:true },
+    { nombre:'Peter Scott',      concepto:'Adelanto - Opción 1 Content Pro',     monto:1499,  fecha:fd(py3,pm3,14), vendedor:'Eveling', esVenta:true },
   ];
-
-  const ctasRes = await Promise.all(cuentas.map(c => api({ action:'addCuenta', ...c })));
-  CACHE.cuentas = cuentas.map((c,i) => ({ ...c, id:ctasRes[i].id || c.id }));
-
-  // ── VENTAS / FACTURACIÓN: $750.000 último mes ───────────────────────
-  const nombres = [
-    'Apex Luxury Realty','Carter Group Miami','Walsh Properties','Chen Real Estate','Johnson Luxury Homes',
-    'Martinez Team','Thompson RE Group','Anderson Homes','Foster Luxury','Brooks Realty',
-    'Cooper Estates','Grant Realty','Kim Properties','Rivera Homes','Palm Beach Prime',
-    'Brickell Elite Brokers','Coral Gables Group','Aventura Estates','Boca Signature','Fort Lauderdale Pro',
-    'Naples Waterfront','Tampa Premier','Orlando Investment Homes','Sarasota Luxe','Key Biscayne Realty',
-    'Sunny Isles Partners','Hollywood Beach Realty','Wynwood Urban Homes','Doral Commercial RE','Weston Family Homes',
-    'Edgewater Brokers','Pinecrest Estates','Coconut Grove Luxury','Fisher Island Realty','Bal Harbour Group',
-    'Downtown Miami RE','North Miami Beach Homes','Kendall Realty Team','Homestead Investment Group','Florida Realtor Network'
-  ];
-
-  const facturacionMontos = [
-    ...Array(10).fill(30000),
-    ...Array(10).fill(20000),
-    ...Array(10).fill(15000),
-    ...Array(10).fill(10000)
-  ];
-
-  const productos = [
-    'Enterprise Authority System',
-    'Top Realtors Full Service',
-    'Content Engine Premium',
-    'Listing Video System',
-    'Ads + Organic Growth',
-    'Podcast + Reels Machine',
-    'Personal Brand Sprint',
-    'Luxury Realtor Authority'
-  ];
-
-  const vendedores = ['Eveling','Eveling','Sofia','Eveling','Sofia'];
-  const metodos = [
-    { nombre:'Wise', cuenta:'CTA_WISE' },
-    { nombre:'PayPal', cuenta:'CTA_PAYPAL' },
-    { nombre:'Transferencia bancaria', cuenta:'CTA_BANK' },
-    { nombre:'Crypto', cuenta:'CTA_USDT' }
-  ];
-
-  const ingRaw = [];
-  const ventas = [];
-  const movs = [];
-
-  facturacionMontos.forEach((monto, i) => {
-    const fecha = day((i % 26) + 1);
-    const metodo = metodos[i % metodos.length];
-    const vendedor = vendedores[i % vendedores.length];
-    const total = Math.round(monto * 1.6);
-    const saldo = total - monto;
-    const cuota1 = Math.floor(saldo / 2);
-    const cuota2 = saldo - cuota1;
-    const producto = productos[i % productos.length];
-
-    ingRaw.push({
-      nombre: nombres[i],
-      concepto: `Pago inicial - ${producto}`,
-      monto,
-      fecha: fd(fecha),
-      vendedor,
-      esVenta: true
-    });
-
-    ventas.push({
-      id: 'VTR_' + String(i + 1).padStart(3, '0'),
-      cliente: nombres[i],
-      telefono: '+1 305 555-' + String(1000 + i),
-      email: `cliente${i + 1}@toprealtors-demo.com`,
-      fecha: fd(fecha),
-      vendedor,
-      producto,
-      metodoPago: metodo.nombre,
-      total,
-      adelanto: monto,
-      saldo,
-      nCuotas: 2,
-      notas: 'Escenario demo $750k. Cliente activo con plan financiado.',
-      cuotas: [
-        { num:1, monto:cuota1, vence:fv(addMonths(fecha, 1)), pagada:false },
-        { num:2, monto:cuota2, vence:fv(addMonths(fecha, 2)), pagada:false }
-      ]
-    });
-
-    movs.push({
-      id: 'MOV_IN_' + String(i + 1).padStart(3, '0'),
-      tipo:'entrada',
-      fecha:fd(fecha),
-      cuentaId:metodo.cuenta,
-      cuentaDestId:'',
-      desc:`Cobro ${nombres[i]}`,
-      monto
-    });
-  });
-
-  // Historial de meses anteriores para que gráficos y filtros tengan contexto
-  const historial = [
-    { nombre:'Mes anterior — ventas cobradas', concepto:'Facturación mensual histórica', monto:420000, fecha:fd(addMonths(day(5), -1)), vendedor:'Eveling', esVenta:true },
-    { nombre:'Hace 2 meses — ventas cobradas', concepto:'Facturación mensual histórica', monto:310000, fecha:fd(addMonths(day(5), -2)), vendedor:'Eveling', esVenta:true },
-    { nombre:'Hace 3 meses — ventas cobradas', concepto:'Facturación mensual histórica', monto:180000, fecha:fd(addMonths(day(5), -3)), vendedor:'Eveling', esVenta:true }
-  ];
-  ingRaw.push(...historial);
-
   const ingRes = await Promise.all(ingRaw.map(r => api({ action:'addIngreso', ...r })));
-  CACHE.ingresos = ingRaw.map((r,i) => {
-    const d = pm(r.fecha);
-    return { ...r, id: ingRes[i].id, mes:d.mes, anio:d.anio };
-  });
+  CACHE.ingresos = ingRaw.map((r,i) => { const d=pm(r.fecha); return { ...r, id:ingRes[i].id, mes:d.mes, anio:d.anio }; });
 
-  localStorage.setItem('dash_ventas', JSON.stringify(ventas));
-  CACHE.ventas = ventas;
-
-  // ── GASTOS OPERATIVOS COMPLETOS ─────────────────────────────────────
+  // ── GASTOS ───────────────────────────────────────────────────────────
   const gasRaw = [
-    { categoria:'ADS', concepto:'Meta Ads — captación USA', monto:65000, fecha:fd(day(1)) },
-    { categoria:'ADS', concepto:'Google Ads — búsqueda inmobiliaria', monto:28000, fecha:fd(day(2)) },
-    { categoria:'ADS', concepto:'TikTok Ads — retargeting', monto:12000, fecha:fd(day(3)) },
-    { categoria:'Equipo', concepto:'Payroll mensual equipo fijo', monto:62000, fecha:fd(day(5)) },
-    { categoria:'Equipo', concepto:'Comisión Tomas 15% revenue', monto:112500, fecha:fd(day(6)) },
-    { categoria:'Equipo', concepto:'Comisiones closers Eveling/Sofia', monto:54000, fecha:fd(day(6)) },
-    { categoria:'Producción', concepto:'Viajes, hoteles y traslados filmaciones', monto:18500, fecha:fd(day(8)) },
-    { categoria:'Producción', concepto:'Alquiler equipos cámara / audio', monto:7200, fecha:fd(day(9)) },
-    { categoria:'Herramientas', concepto:'GoHighLevel Agency Pro', monto:497, fecha:fd(day(1)) },
-    { categoria:'Herramientas', concepto:'ChatGPT Team', monto:150, fecha:fd(day(1)) },
-    { categoria:'Herramientas', concepto:'Canva Teams', monto:300, fecha:fd(day(1)) },
-    { categoria:'Herramientas', concepto:'Bunny CDN / hosting videos', monto:410, fecha:fd(day(1)) },
-    { categoria:'Herramientas', concepto:'Notion Team', monto:160, fecha:fd(day(1)) },
-    { categoria:'Herramientas', concepto:'Slack Pro', monto:240, fecha:fd(day(1)) },
-    { categoria:'Herramientas', concepto:'Zoom Pro + Webinar', monto:220, fecha:fd(day(1)) },
-    { categoria:'Legal/Contable', concepto:'CPA + bookkeeping mensual', monto:3500, fecha:fd(day(12)) },
-    { categoria:'Oficina', concepto:'Coworking / meeting rooms', monto:2200, fecha:fd(day(15)) },
-    { categoria:'Software', concepto:'Zapier / Make / automatizaciones', monto:850, fecha:fd(day(16)) },
-    { categoria:'Software', concepto:'Calendly Teams', monto:192, fecha:fd(day(16)) },
-    { categoria:'Software', concepto:'Twilio / WhatsApp API', monto:940, fecha:fd(day(16)) },
-    { categoria:'Impuestos', concepto:'Reserva taxes estimada', monto:95000, fecha:fd(day(20)) },
-    { categoria:'Reservas', concepto:'Reserva operativa mensual', monto:50000, fecha:fd(day(22)) },
-
-    { categoria:'ADS', concepto:'Meta Ads mes anterior', monto:42000, fecha:fd(addMonths(day(1), -1)) },
-    { categoria:'Equipo', concepto:'Payroll mes anterior', monto:42000, fecha:fd(addMonths(day(5), -1)) },
-    { categoria:'Herramientas', concepto:'Stack herramientas mes anterior', monto:2100, fecha:fd(addMonths(day(8), -1)) },
-    { categoria:'ADS', concepto:'Meta Ads hace 2 meses', monto:26000, fecha:fd(addMonths(day(1), -2)) },
-    { categoria:'Equipo', concepto:'Payroll hace 2 meses', monto:31000, fecha:fd(addMonths(day(5), -2)) },
-    { categoria:'ADS', concepto:'Meta Ads hace 3 meses', monto:15000, fecha:fd(addMonths(day(1), -3)) },
-    { categoria:'Equipo', concepto:'Payroll hace 3 meses', monto:22000, fecha:fd(addMonths(day(5), -3)) }
+    // MES ACTUAL
+    { categoria:'ADS',          concepto:'Meta Ads — campaña captación mayo',   monto:4500,  fecha:fd(y,m,1) },
+    { categoria:'ADS',          concepto:'Google Ads — search mayo',            monto:1800,  fecha:fd(y,m,1) },
+    { categoria:'Herramientas', concepto:'GoHighLevel Pro',                     monto:297,   fecha:fd(y,m,1) },
+    { categoria:'Herramientas', concepto:'ChatGPT Plus',                        monto:20,    fecha:fd(y,m,1) },
+    { categoria:'Herramientas', concepto:'Bunny CDN — hosting video',           monto:45,    fecha:fd(y,m,1) },
+    { categoria:'Herramientas', concepto:'CapCut Pro',                          monto:15,    fecha:fd(y,m,2) },
+    { categoria:'Herramientas', concepto:'Canva Pro',                           monto:13,    fecha:fd(y,m,2) },
+    { categoria:'Herramientas', concepto:'Notion Team',                         monto:16,    fecha:fd(y,m,2) },
+    { categoria:'Herramientas', concepto:'Slack Pro',                           monto:8,     fecha:fd(y,m,3) },
+    { categoria:'Herramientas', concepto:'Zoom Pro',                            monto:15,    fecha:fd(y,m,3) },
+    { categoria:'Equipo',       concepto:'Tomas — comisión revenue 15%',        monto:23250, fecha:fd(y,m,5) },
+    { categoria:'Equipo',       concepto:'Eveling — comisión ventas 10%',       monto:3750,  fecha:fd(y,m,5) },
+    { categoria:'Otro',         concepto:'Edición de video freelance',          monto:400,   fecha:fd(y,m,8) },
+    { categoria:'Otro',         concepto:'Diseño thumbnail pack',               monto:150,   fecha:fd(y,m,10) },
+    // MES -1
+    { categoria:'ADS',          concepto:'Meta Ads abril',                      monto:3800,  fecha:fd(py1,pm1,1) },
+    { categoria:'ADS',          concepto:'Google Ads abril',                    monto:1200,  fecha:fd(py1,pm1,1) },
+    { categoria:'Herramientas', concepto:'GoHighLevel Pro',                     monto:297,   fecha:fd(py1,pm1,1) },
+    { categoria:'Herramientas', concepto:'ChatGPT Plus',                        monto:20,    fecha:fd(py1,pm1,1) },
+    { categoria:'Herramientas', concepto:'Bunny CDN',                           monto:38,    fecha:fd(py1,pm1,1) },
+    { categoria:'Equipo',       concepto:'Tomas — comisión revenue',            monto:8500,  fecha:fd(py1,pm1,5) },
+    { categoria:'Equipo',       concepto:'Eveling — comisión ventas',           monto:1799,  fecha:fd(py1,pm1,5) },
+    // MES -2
+    { categoria:'ADS',          concepto:'Meta Ads marzo',                      monto:2900,  fecha:fd(py2,pm2,1) },
+    { categoria:'ADS',          concepto:'Google Ads marzo',                    monto:900,   fecha:fd(py2,pm2,1) },
+    { categoria:'Herramientas', concepto:'GoHighLevel Pro',                     monto:297,   fecha:fd(py2,pm2,1) },
+    { categoria:'Herramientas', concepto:'Canva Pro anual',                     monto:130,   fecha:fd(py2,pm2,3) },
+    { categoria:'Equipo',       concepto:'Tomas — comisión revenue',            monto:7200,  fecha:fd(py2,pm2,5) },
+    // MES -3
+    { categoria:'ADS',          concepto:'Meta Ads febrero',                    monto:2200,  fecha:fd(py3,pm3,1) },
+    { categoria:'Herramientas', concepto:'GoHighLevel Pro',                     monto:297,   fecha:fd(py3,pm3,1) },
+    { categoria:'Equipo',       concepto:'Tomas — comisión revenue',            monto:5100,  fecha:fd(py3,pm3,5) },
   ];
-
   const gasRes = await Promise.all(gasRaw.map(r => api({ action:'addGasto', ...r })));
-  CACHE.gastos = gasRaw.map((r,i) => {
-    const d = pm(r.fecha);
-    return { ...r, id:gasRes[i].id, mes:d.mes, anio:d.anio };
-  });
+  CACHE.gastos = gasRaw.map((r,i) => { const d=pm(r.fecha); return { ...r, id:gasRes[i].id, mes:d.mes, anio:d.anio }; });
 
-  gasRaw
-    .filter(g => pm(g.fecha).mes === MESES_ES[now.getMonth()] && pm(g.fecha).anio === now.getFullYear())
-    .forEach((g, i) => {
-      movs.push({
-        id:'MOV_OUT_' + String(i + 1).padStart(3, '0'),
-        tipo:'salida',
-        fecha:g.fecha,
-        cuentaId:g.categoria === 'Equipo' ? 'CTA_WISE' : 'CTA_CARD',
-        cuentaDestId:'',
-        desc:g.concepto,
-        monto:g.monto
-      });
-    });
-
-  movs.push(
-    { id:'MOV_TR_001', tipo:'transferencia', fecha:fd(day(18)), cuentaId:'CTA_WISE', cuentaDestId:'CTA_BANK', desc:'Transferencia Wise a banco principal', monto:125000 },
-    { id:'MOV_TR_002', tipo:'transferencia', fecha:fd(day(19)), cuentaId:'CTA_PAYPAL', cuentaDestId:'CTA_BANK', desc:'Consolidación PayPal a banco', monto:60000 },
-    { id:'MOV_TR_003', tipo:'transferencia', fecha:fd(day(21)), cuentaId:'CTA_BANK', cuentaDestId:'CTA_CASH', desc:'Caja chica producción', monto:8000 }
-  );
-
-  const movsRes = await Promise.all(movs.map(m => api({ action:'addMovimiento', ...m })));
-  CACHE.movimientos = movs.map((m,i) => ({ ...m, id:movsRes[i].id || m.id }));
-
-  // ── SUSCRIPCIONES ───────────────────────────────────────────────────
-  const subsData = [
-    { nombre:'GoHighLevel', emoji:'🚀', plan:'Agency Pro', ciclo:'Mensual', costo:497, vence:fv(addMonths(day(1),1)), categoria:'CRM', cuenta:'admin@toprealtors.com', notas:'Backend principal funnels y curso', pagador:'Frank', metodoPago:'Tarjeta empresa', tarjetaDigits:'4231' },
-    { nombre:'Meta Ads', emoji:'📣', plan:'Business', ciclo:'Mensual', costo:0, vence:fv(addMonths(day(1),1)), categoria:'Marketing', cuenta:'ads@toprealtors.com', notas:'Variable. Se registra como gasto aparte.', pagador:'Frank', metodoPago:'Tarjeta empresa', tarjetaDigits:'4231' },
-    { nombre:'ChatGPT Team', emoji:'🤖', plan:'Team', ciclo:'Mensual', costo:150, vence:fv(addMonths(day(15),1)), categoria:'IA', cuenta:'ops@toprealtors.com', notas:'Equipo operaciones y contenido', pagador:'Tomas', metodoPago:'Tarjeta personal', tarjetaDigits:'7892' },
-    { nombre:'Claude', emoji:'🧠', plan:'Pro', ciclo:'Mensual', costo:20, vence:fv(addMonths(day(12),1)), categoria:'IA', cuenta:'tech@toprealtors.com', notas:'Código y documentación', pagador:'Tomas', metodoPago:'Tarjeta personal', tarjetaDigits:'7892' },
-    { nombre:'Canva Teams', emoji:'🎨', plan:'Teams', ciclo:'Mensual', costo:300, vence:fv(addMonths(day(10),1)), categoria:'Diseño', cuenta:'design@toprealtors.com', notas:'Diseño, PDFs y ads', pagador:'Frank', metodoPago:'Tarjeta empresa', tarjetaDigits:'4231' },
-    { nombre:'Bunny CDN', emoji:'🐰', plan:'Scale', ciclo:'Mensual', costo:410, vence:fv(addMonths(day(1),1)), categoria:'Hosting', cuenta:'videos@toprealtors.com', notas:'Hosting videos y páginas', pagador:'Tomas', metodoPago:'Tarjeta personal', tarjetaDigits:'7892' },
-    { nombre:'Notion', emoji:'📝', plan:'Business', ciclo:'Mensual', costo:160, vence:fv(addMonths(day(8),1)), categoria:'Productividad', cuenta:'team@toprealtors.com', notas:'Wiki y SOPs', pagador:'Tomas', metodoPago:'Tarjeta personal', tarjetaDigits:'7892' },
-    { nombre:'Slack', emoji:'💬', plan:'Pro', ciclo:'Mensual', costo:240, vence:fv(addMonths(day(9),1)), categoria:'Comunicación', cuenta:'team@toprealtors.com', notas:'Comunicación interna', pagador:'Frank', metodoPago:'Tarjeta empresa', tarjetaDigits:'4231' },
-    { nombre:'Zoom', emoji:'📹', plan:'Webinar', ciclo:'Mensual', costo:220, vence:fv(addMonths(day(11),1)), categoria:'Llamadas', cuenta:'calls@toprealtors.com', notas:'Calls y onboarding', pagador:'Frank', metodoPago:'Tarjeta empresa', tarjetaDigits:'4231' },
-    { nombre:'Make', emoji:'🔁', plan:'Pro', ciclo:'Mensual', costo:99, vence:fv(addMonths(day(14),1)), categoria:'Automatización', cuenta:'auto@toprealtors.com', notas:'Automations GHL/Sheets', pagador:'Tomas', metodoPago:'Tarjeta personal', tarjetaDigits:'7892' },
-    { nombre:'Zapier', emoji:'⚡', plan:'Team', ciclo:'Mensual', costo:199, vence:fv(addMonths(day(17),1)), categoria:'Automatización', cuenta:'zapier@toprealtors.com', notas:'Backups y conexiones rápidas', pagador:'Tomas', metodoPago:'Tarjeta personal', tarjetaDigits:'7892' },
-    { nombre:'Calendly', emoji:'📅', plan:'Teams', ciclo:'Mensual', costo:192, vence:fv(addMonths(day(18),1)), categoria:'Scheduling', cuenta:'sales@toprealtors.com', notas:'Agenda closers', pagador:'Frank', metodoPago:'Tarjeta empresa', tarjetaDigits:'4231' },
-    { nombre:'Twilio', emoji:'📲', plan:'Pay/uso', ciclo:'Mensual', costo:940, vence:fv(addMonths(day(19),1)), categoria:'WhatsApp', cuenta:'wa@toprealtors.com', notas:'WhatsApp API y SMS', pagador:'Frank', metodoPago:'Tarjeta empresa', tarjetaDigits:'4231' },
-    { nombre:'CapCut', emoji:'✂️', plan:'Teams', ciclo:'Mensual', costo:120, vence:fv(addMonths(day(20),1)), categoria:'Edición', cuenta:'edit@toprealtors.com', notas:'Editores reels', pagador:'Nicolas', metodoPago:'Tarjeta personal', tarjetaDigits:'3341' },
-    { nombre:'Frame.io', emoji:'🎞️', plan:'Team', ciclo:'Mensual', costo:75, vence:fv(addMonths(day(22),1)), categoria:'Producción', cuenta:'video@toprealtors.com', notas:'Revisión de videos', pagador:'Lucas', metodoPago:'Tarjeta personal', tarjetaDigits:'9981' }
+  // ── VENTAS CON CUOTAS (localStorage) ────────────────────────────────
+  const ventas = [
+    // Ventas activas mes actual — todas con cuotas pendientes
+    { id:'VTR001', cliente:'Michael Carter',  telefono:'+1 305 555-0192', email:'m.carter@carterrealty.com',
+      fecha:fd(y,m,2), vendedor:'Eveling', producto:'Opción 2 - Full Service', metodoPago:'Wise',
+      total:12000, adelanto:5000, saldo:7000, nCuotas:2, notas:'Top producer Miami. 50 transacciones/año.',
+      cuotas:[
+        { num:1, monto:3500, vence:fv(y,nm(m+1),2),  pagada:false },
+        { num:2, monto:3500, vence:fv(y,nm(m+2),2),  pagada:false },
+      ]},
+    { id:'VTR002', cliente:'Jennifer Walsh',  telefono:'+1 786 555-0341', email:'j.walsh@walshproperties.com',
+      fecha:fd(y,m,3), vendedor:'Eveling', producto:'Opción 2 - Full Service', metodoPago:'PayPal',
+      total:12000, adelanto:4000, saldo:8000, nCuotas:2, notas:'Broker Coral Gables. Especialista lujo.',
+      cuotas:[
+        { num:1, monto:4000, vence:fv(y,nm(m+1),3),  pagada:false },
+        { num:2, monto:4000, vence:fv(y,nm(m+2),3),  pagada:false },
+      ]},
+    { id:'VTR003', cliente:'David Chen',      telefono:'+1 954 555-0287', email:'d.chen@chenrealestate.com',
+      fecha:fd(y,m,4), vendedor:'Eveling', producto:'Opción 1 - Content Pro', metodoPago:'Transferencia bancaria',
+      total:5999, adelanto:2000, saldo:3999, nCuotas:2, notas:'Agente independiente. Quiere generar leads orgánicos.',
+      cuotas:[
+        { num:1, monto:2000, vence:fv(y,nm(m+1),4),  pagada:false },
+        { num:2, monto:1999, vence:fv(y,nm(m+2),4),  pagada:false },
+      ]},
+    { id:'VTR004', cliente:'Sarah Johnson',   telefono:'+1 561 555-0163', email:'s.johnson@luxurymia.com',
+      fecha:fd(y,m,5), vendedor:'Eveling', producto:'Opción 2 - Full Service', metodoPago:'Wise',
+      total:12000, adelanto:6000, saldo:6000, nCuotas:2, notas:'Agente Palm Beach $2M+ properties.',
+      cuotas:[
+        { num:1, monto:3000, vence:fv(y,nm(m+1),5),  pagada:false },
+        { num:2, monto:3000, vence:fv(y,nm(m+2),5),  pagada:false },
+      ]},
+    { id:'VTR005', cliente:'Robert Martinez', telefono:'+1 305 555-0449', email:'r.martinez@miamiagent.com',
+      fecha:fd(y,m,6), vendedor:'Eveling', producto:'Opción 1 - Content Pro', metodoPago:'Transferencia bancaria',
+      total:5999, adelanto:1500, saldo:4499, nCuotas:3, notas:'Primer mes. Perfil Instagram con 2k seguidores.',
+      cuotas:[
+        { num:1, monto:1500, vence:fv(y,nm(m+1),6),  pagada:false },
+        { num:2, monto:1500, vence:fv(y,nm(m+2),6),  pagada:false },
+        { num:3, monto:1499, vence:fv(y,nm(m+3),6),  pagada:false },
+      ]},
+    { id:'VTR006', cliente:'Lisa Thompson',   telefono:'+1 786 555-0512', email:'l.thompson@thompsonre.com',
+      fecha:fd(y,m,8), vendedor:'Eveling', producto:'Opción 2 - Full Service', metodoPago:'PayPal',
+      total:12000, adelanto:5000, saldo:7000, nCuotas:2, notas:'Equipo de 3 agentes. Scaling agresivo.',
+      cuotas:[
+        { num:1, monto:3500, vence:fv(y,nm(m+1),8),  pagada:false },
+        { num:2, monto:3500, vence:fv(y,nm(m+2),8),  pagada:false },
+      ]},
+    { id:'VTR007', cliente:'James Anderson',  telefono:'+1 954 555-0671', email:'j.anderson@andersonhomes.com',
+      fecha:fd(y,m,9), vendedor:'Eveling', producto:'Opción 1 - Content Pro', metodoPago:'Transferencia bancaria',
+      total:5999, adelanto:2000, saldo:3999, nCuotas:2, notas:'Agente Fort Lauderdale. 8 años experiencia.',
+      cuotas:[
+        { num:1, monto:2000, vence:fv(y,nm(m+1),9),  pagada:false },
+        { num:2, monto:1999, vence:fv(y,nm(m+2),9),  pagada:false },
+      ]},
+    { id:'VTR008', cliente:'Amanda Foster',   telefono:'+1 561 555-0783', email:'a.foster@fosterluxury.com',
+      fecha:fd(y,m,10), vendedor:'Eveling', producto:'Opción 2 - Full Service', metodoPago:'Wise',
+      total:12000, adelanto:4500, saldo:7500, nCuotas:2, notas:'Top agent Boca Raton. Muy activa en redes.',
+      cuotas:[
+        { num:1, monto:3750, vence:fv(y,nm(m+1),10), pagada:false },
+        { num:2, monto:3750, vence:fv(y,nm(m+2),10), pagada:false },
+      ]},
+    { id:'VTR009', cliente:'Kevin Brooks',    telefono:'+1 786 555-0892', email:'k.brooks@brooksrealty.com',
+      fecha:fd(y,m,11), vendedor:'Eveling', producto:'Opción 1 - Content Pro', metodoPago:'PayPal',
+      total:5999, adelanto:1500, saldo:4499, nCuotas:3, notas:'Agente joven. Alto potencial de crecimiento.',
+      cuotas:[
+        { num:1, monto:1500, vence:fv(y,nm(m+1),11), pagada:false },
+        { num:2, monto:1500, vence:fv(y,nm(m+2),11), pagada:false },
+        { num:3, monto:1499, vence:fv(y,nm(m+3),11), pagada:false },
+      ]},
+    { id:'VTR010', cliente:'Nancy Cooper',    telefono:'+1 305 555-0934', email:'n.cooper@cooperestates.com',
+      fecha:fd(y,m,12), vendedor:'Eveling', producto:'Opción 2 - Full Service', metodoPago:'Wise',
+      total:12000, adelanto:5500, saldo:6500, nCuotas:2, notas:'Referida por Thomas Grant. Broker Aventura.',
+      cuotas:[
+        { num:1, monto:3250, vence:fv(y,nm(m+1),12), pagada:false },
+        { num:2, monto:3250, vence:fv(y,nm(m+2),12), pagada:false },
+      ]},
+    // Ventas mes anterior — cuotas parcialmente cobradas
+    { id:'VTR011', cliente:'Thomas Grant',    telefono:'+1 954 555-1001', email:'t.grant@grantrealty.com',
+      fecha:fd(py1,pm1,5), vendedor:'Eveling', producto:'Opción 2 - Full Service', metodoPago:'Wise',
+      total:12000, adelanto:3999, saldo:8001, nCuotas:3, notas:'Broker independiente. Foco en lujo.',
+      cuotas:[
+        { num:1, monto:2667, vence:fv(y,m,5),        pagada:true, montoCobrado:4000, metodo:'Wise', fechaCobro:fd(y,m,3), notas:'Adelantó un poco más' },
+        { num:2, monto:2667, vence:fv(y,nm(m+1),5),  pagada:false },
+        { num:3, monto:2667, vence:fv(y,nm(m+2),5),  pagada:false },
+      ]},
+    { id:'VTR012', cliente:'Rachel Kim',      telefono:'+1 786 555-1102', email:'r.kim@kimproperties.com',
+      fecha:fd(py1,pm1,7), vendedor:'Eveling', producto:'Opción 1 - Content Pro', metodoPago:'Transferencia bancaria',
+      total:5999, adelanto:1499, saldo:4500, nCuotas:2, notas:'Agente Wynwood. Foco en reels y TikTok.',
+      cuotas:[
+        { num:1, monto:1500, vence:fv(y,m,7),        pagada:true, montoCobrado:1500, metodo:'Transferencia', fechaCobro:fd(y,m,4) },
+        { num:2, monto:3000, vence:fv(y,nm(m+1),7),  pagada:false },
+      ]},
+    { id:'VTR013', cliente:'Carlos Rivera',   telefono:'+1 954 555-1203', email:'c.rivera@riverahomes.com',
+      fecha:fd(py1,pm1,10), vendedor:'Eveling', producto:'Opción 2 - Full Service', metodoPago:'PayPal',
+      total:12000, adelanto:3999, saldo:8001, nCuotas:3, notas:'Agente Hialeah. Gran red de contactos.',
+      cuotas:[
+        { num:1, monto:2667, vence:fv(y,m,10),       pagada:true, montoCobrado:4000, metodo:'PayPal', fechaCobro:fd(y,m,7) },
+        { num:2, monto:2667, vence:fv(y,nm(m+1),10), pagada:false },
+        { num:3, monto:2667, vence:fv(y,nm(m+2),10), pagada:false },
+      ]},
   ];
+  localStorage.setItem('dash_ventas', JSON.stringify(ventas));
 
-  const subs = subsData.map((s,i) => ({ ...s, id:'SUB_' + String(i+1).padStart(3,'0') }));
+  // ── SUSCRIPCIONES ────────────────────────────────────────────────────
+  const subsData = [
+    { nombre:'GoHighLevel',  emoji:'🚀', plan:'Pro',      ciclo:'Mensual',  costo:297,  vence:fv(y,nm(m+1),1),  categoria:'CRM',         cuenta:'cuenta@toprealtors.com', notas:'Plan agencia. Incluye 3 sub-cuentas.', pagador:'Frank', metodoPago:'Tarjeta empresa', tarjetaDigits:'4231' },
+    { nombre:'Meta Ads',     emoji:'📣', plan:'Business', ciclo:'Mensual',  costo:0,    vence:fv(y,nm(m+1),1),  categoria:'Marketing',   cuenta:'ads@toprealtors.com',    notas:'Gasto variable según campaña.', pagador:'Frank', metodoPago:'Tarjeta empresa', tarjetaDigits:'4231' },
+    { nombre:'ChatGPT',      emoji:'🤖', plan:'Plus',     ciclo:'Mensual',  costo:20,   vence:fv(y,nm(m+1),15), categoria:'Herramientas', cuenta:'tomas@toprealtors.com',  notas:'', pagador:'Tomas', metodoPago:'Tarjeta personal', tarjetaDigits:'7892' },
+    { nombre:'Canva',        emoji:'🎨', plan:'Pro',      ciclo:'Anual',    costo:130,  vence:fv(y+1,pm2,3),    categoria:'Diseño',      cuenta:'design@toprealtors.com', notas:'Renovación anual. Compartido con Eveling.', pagador:'Frank', metodoPago:'Tarjeta empresa', tarjetaDigits:'4231' },
+    { nombre:'Bunny CDN',    emoji:'🐰', plan:'Pay/uso',  ciclo:'Mensual',  costo:45,   vence:fv(y,nm(m+1),1),  categoria:'Hosting',     cuenta:'tech@toprealtors.com',   notas:'Hosting videos clientes. Aumenta con volumen.', pagador:'Tomas', metodoPago:'Tarjeta personal', tarjetaDigits:'7892' },
+    { nombre:'Notion',       emoji:'📝', plan:'Team',     ciclo:'Mensual',  costo:16,   vence:fv(y,nm(m+1),10), categoria:'Productividad', cuenta:'team@toprealtors.com',  notas:'3 usuarios.', pagador:'Tomas', metodoPago:'Tarjeta personal', tarjetaDigits:'7892' },
+    { nombre:'Zoom',         emoji:'📹', plan:'Pro',      ciclo:'Mensual',  costo:15,   vence:fv(y,nm(m+1),8),  categoria:'Comunicación', cuenta:'calls@toprealtors.com', notas:'Para onboarding clientes.', pagador:'Frank', metodoPago:'Tarjeta empresa', tarjetaDigits:'4231' },
+    { nombre:'Slack',        emoji:'💬', plan:'Pro',      ciclo:'Mensual',  costo:8,    vence:fv(y,nm(m+1),8),  categoria:'Comunicación', cuenta:'team@toprealtors.com',   notas:'', pagador:'Frank', metodoPago:'Tarjeta empresa', tarjetaDigits:'4231' },
+    { nombre:'CapCut',       emoji:'✂️', plan:'Pro',      ciclo:'Mensual',  costo:15,   vence:fv(y,nm(m+1),20), categoria:'Edición',     cuenta:'eveling@toprealtors.com', notas:'Edición reels y videos.', pagador:'Eveling', metodoPago:'Tarjeta personal', tarjetaDigits:'3341' },
+  ];
+  const subs = subsData.map((s,i) => ({ ...s, id:'SUB'+String(i+1).padStart(3,'0') }));
   localStorage.setItem('dash_subs', JSON.stringify(subs));
   CACHE.subs = subs;
+
+  // ── TESORERÍA ────────────────────────────────────────────────────────
+  const cuentas = [
+    { id:'CTA001', nombre:'Wise USD',       emoji:'💸', tipo:'digital',   moneda:'USD', saldo:0 },
+    { id:'CTA002', nombre:'PayPal',         emoji:'🅿️', tipo:'digital',   moneda:'USD', saldo:0 },
+    { id:'CTA003', nombre:'Transferencia',  emoji:'🏦', tipo:'banco',     moneda:'USD', saldo:0 },
+    { id:'CTA004', nombre:'Efectivo USD',   emoji:'💵', tipo:'efectivo',  moneda:'USD', saldo:0 },
+    { id:'CTA005', nombre:'Tarjeta empresa',emoji:'💳', tipo:'tarjeta',   moneda:'USD', saldo:0 },
+    { id:'CTA006', nombre:'Crypto USDT',    emoji:'₿',  tipo:'crypto',    moneda:'USDT', saldo:0 },
+  ];
+  // Cargar cuentas en Sheet
+  const ctasRes = await Promise.all(cuentas.map(c => api({ action: 'addCuenta', ...c })));
+  CACHE.cuentas = cuentas.map((c,i) => ({ ...c, id: ctasRes[i].id }));
+
+  const movs = [
+    // Entradas mes actual
+    { id:'MOV001', tipo:'entrada', fecha:fd(y,m,2),  cuentaId:'CTA001', cuentaDestId:'', desc:'Adelanto Michael Carter',   monto:5000 },
+    { id:'MOV002', tipo:'entrada', fecha:fd(y,m,3),  cuentaId:'CTA002', cuentaDestId:'', desc:'Adelanto Jennifer Walsh',   monto:4000 },
+    { id:'MOV003', tipo:'entrada', fecha:fd(y,m,4),  cuentaId:'CTA003', cuentaDestId:'', desc:'Adelanto David Chen',       monto:2000 },
+    { id:'MOV004', tipo:'entrada', fecha:fd(y,m,5),  cuentaId:'CTA001', cuentaDestId:'', desc:'Adelanto Sarah Johnson',    monto:6000 },
+    { id:'MOV005', tipo:'entrada', fecha:fd(y,m,6),  cuentaId:'CTA003', cuentaDestId:'', desc:'Adelanto Robert Martinez',  monto:1500 },
+    { id:'MOV006', tipo:'entrada', fecha:fd(y,m,8),  cuentaId:'CTA002', cuentaDestId:'', desc:'Adelanto Lisa Thompson',    monto:5000 },
+    { id:'MOV007', tipo:'entrada', fecha:fd(y,m,9),  cuentaId:'CTA003', cuentaDestId:'', desc:'Adelanto James Anderson',   monto:2000 },
+    { id:'MOV008', tipo:'entrada', fecha:fd(y,m,10), cuentaId:'CTA001', cuentaDestId:'', desc:'Adelanto Amanda Foster',    monto:4500 },
+    { id:'MOV009', tipo:'entrada', fecha:fd(y,m,11), cuentaId:'CTA002', cuentaDestId:'', desc:'Adelanto Kevin Brooks',     monto:1500 },
+    { id:'MOV010', tipo:'entrada', fecha:fd(y,m,12), cuentaId:'CTA001', cuentaDestId:'', desc:'Adelanto Nancy Cooper',     monto:5500 },
+    { id:'MOV011', tipo:'entrada', fecha:fd(y,m,3),  cuentaId:'CTA001', cuentaDestId:'', desc:'Cuota Thomas Grant',        monto:4000 },
+    { id:'MOV012', tipo:'entrada', fecha:fd(y,m,4),  cuentaId:'CTA003', cuentaDestId:'', desc:'Cuota Rachel Kim',          monto:1500 },
+    { id:'MOV013', tipo:'entrada', fecha:fd(y,m,7),  cuentaId:'CTA002', cuentaDestId:'', desc:'Cuota Carlos Rivera',       monto:4000 },
+    // Salidas mes actual
+    { id:'MOV020', tipo:'salida',  fecha:fd(y,m,1),  cuentaId:'CTA005', cuentaDestId:'', desc:'GoHighLevel Pro',           monto:297  },
+    { id:'MOV021', tipo:'salida',  fecha:fd(y,m,1),  cuentaId:'CTA005', cuentaDestId:'', desc:'Meta Ads mayo',             monto:4500 },
+    { id:'MOV022', tipo:'salida',  fecha:fd(y,m,1),  cuentaId:'CTA005', cuentaDestId:'', desc:'Google Ads mayo',           monto:1800 },
+    { id:'MOV023', tipo:'salida',  fecha:fd(y,m,5),  cuentaId:'CTA001', cuentaDestId:'', desc:'Comisión Tomas 15%',        monto:23250},
+    { id:'MOV024', tipo:'salida',  fecha:fd(y,m,5),  cuentaId:'CTA001', cuentaDestId:'', desc:'Comisión Eveling 10%',      monto:3750 },
+    // Transferencias internas
+    { id:'MOV030', tipo:'transferencia', fecha:fd(y,m,6), cuentaId:'CTA001', cuentaDestId:'CTA004', desc:'Retiro efectivo Frank', monto:3000 },
+  ];
+  // Cargar movimientos en Sheet
+  const movsRes = await Promise.all(movs.map(m => api({ action: 'addMovimiento', ...m })));
+  CACHE.movimientos = movs.map((m,i) => ({ ...m, id: movsRes[i].id }));
 
   // Tasa de cambio
   localStorage.setItem('ars_usd_tasa', '1200');
   localStorage.setItem('ars_usd_tasa_fecha', new Date().toISOString().split('T')[0]);
 
-  fillPeriodSelects();
-
+  // Reload cache
+  CACHE.ventas = ventas;
   renderDashboardFromCache();
   renderIngresosFromCache();
-  renderGastosFromCache();
   renderCuotas();
   renderTesoreria();
   renderSubs();
   renderEquipo();
 
-  showToast('✅ Escenario cargado — $750.000 facturación, 40 ventas, 15 empleados, gastos, subs y tesorería', 'ok');
+  showToast('✅ Escenario cargado — $155.000 facturación, 13 ventas, 9 suscripciones','ok');
 }
 
 
@@ -3761,6 +3650,11 @@ function openModal(name) {
     const el = document.getElementById(id);
     if (el) { const cur = el.value; el.innerHTML = opts; if (cur) el.value = cur; }
   });
+  
+  // Poblar método de pago con cuentas de tesorería
+  if (name === 'venta') {
+    fillMetodoPagoSelect();
+  }
 }
 function closeModal(name) { document.getElementById('modal-'+name).classList.remove('open'); }
 
@@ -3779,14 +3673,16 @@ function fmt(n) {
 
 function fmtFecha(f) {
   if (!f) return '—';
-  const d = parseDateSafe(f);
-  if (!d) return String(f).split('T')[0];
-  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+  const s = String(f).split('T')[0];
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [y,m,d] = s.split('-');
+    return `${d}/${m}/${y}`;
+  }
+  return s;
 }
 
 function parseFechaLocal(fechaStr) {
-  const d = parseDateSafe(fechaStr);
-  if (!d) return { mes:'', anio:'' };
+  const d = new Date(fechaStr + 'T00:00:00');
   return { mes:MESES[d.getMonth()], anio:d.getFullYear() };
 }
 
