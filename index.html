@@ -217,6 +217,97 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
   vertical-align: middle;
 }
 
+.month-selector-btn {
+  display: flex;
+  align-items: center;
+  padding: 8px 14px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: rgba(255,255,255,0.9);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--font-sans);
+  min-width: 140px;
+  justify-content: space-between;
+}
+
+.month-selector-btn:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.2);
+}
+
+.month-selector-btn svg {
+  transition: transform 0.2s ease;
+}
+
+.month-selector-btn.open svg {
+  transform: rotate(180deg);
+}
+
+.month-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--card-bg);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 8px;
+  min-width: 200px;
+  max-height: 400px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  backdrop-filter: blur(10px);
+}
+
+.month-dropdown-item {
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  font-size: 14px;
+  color: rgba(255,255,255,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.month-dropdown-item:hover {
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.9);
+}
+
+.month-dropdown-item.selected {
+  background: rgba(59,130,246,0.15);
+  color: #60A5FA;
+}
+
+.month-dropdown-item.selected::after {
+  content: '✓';
+  font-size: 16px;
+}
+
+.month-dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+
+.month-dropdown::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.05);
+  border-radius: 3px;
+}
+
+.month-dropdown::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.2);
+  border-radius: 3px;
+}
+
+.month-dropdown::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.3);
+}
+
 
 /* TABLES */
 .table-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:16px; }
@@ -573,10 +664,21 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
 
     <!-- DASHBOARD -->
     <section id="section-dashboard" class="section active">
-      <div class="page-header">
-        <div><div class="page-title">Dashboard</div><div class="page-sub" id="dash-period">—</div></div>
-        <div class="header-actions">
-          <select class="period-select" id="period-select" onchange="renderDashboardFromCache()"></select>
+      <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px;">
+        <div>
+          <div class="page-title">Dashboard</div>
+          <div class="page-sub" id="dash-period">May 2026</div>
+        </div>
+        <div class="header-actions" style="position: relative;">
+          <button id="month-selector-btn" class="month-selector-btn">
+            <span id="selected-month-text">May 2026</span>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="margin-left: 8px;">
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M14.0607 5.49999L13.5303 6.03032L8.7071 10.8535C8.31658 11.2441 7.68341 11.2441 7.29289 10.8535L2.46966 6.03032L1.93933 5.49999L2.99999 4.43933L3.53032 4.96966L7.99999 9.43933L12.4697 4.96966L13 4.43933L14.0607 5.49999Z"/>
+            </svg>
+          </button>
+          <div id="month-dropdown" class="month-dropdown" style="display: none;">
+            <!-- Populated by JS -->
+          </div>
         </div>
       </div>
       <div class="metrics-grid">
@@ -1477,6 +1579,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwJQHtZBHkG3twZwrHzowix
 
 let TOKEN = localStorage.getItem('dash_token') || '';
 let CACHE = { ingresos:[], gastos:[], equipo:[], subs:[], ventas:[], cuentas:[], movimientos:[] };
+let SELECTED_PERIOD = null; // For month/year filter
 let charts = {};
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
@@ -4252,7 +4355,96 @@ document.addEventListener('DOMContentLoaded', () => {
       renderChartTimeline(months);
     });
   });
+
+  // Month/Year selector dropdown
+  initMonthSelector();
 });
+
+function initMonthSelector() {
+  const btn = document.getElementById('month-selector-btn');
+  const dropdown = document.getElementById('month-dropdown');
+  const selectedText = document.getElementById('selected-month-text');
+  
+  if (!btn || !dropdown) return;
+
+  // Generate months list (last 24 months)
+  const months = [];
+  const MESES_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+  const MESES_FULL = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const now = new Date();
+  
+  for (let i = 0; i < 24; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({
+      label: `${MESES_FULL[d.getMonth()]} ${d.getFullYear()}`,
+      mes: MESES_ES[d.getMonth()],
+      anio: d.getFullYear(),
+      value: `${MESES_ES[d.getMonth()]} ${d.getFullYear()}`
+    });
+  }
+
+  // Add "Todos los meses" option
+  months.push({
+    label: 'Todos los meses',
+    mes: null,
+    anio: null,
+    value: 'all'
+  });
+
+  // Populate dropdown
+  dropdown.innerHTML = months.map((m, i) => 
+    `<div class="month-dropdown-item${i === 0 ? ' selected' : ''}" data-value="${m.value}" data-mes="${m.mes}" data-anio="${m.anio}">
+      ${m.label}
+    </div>`
+  ).join('');
+
+  // Toggle dropdown
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = dropdown.style.display === 'block';
+    dropdown.style.display = isOpen ? 'none' : 'block';
+    btn.classList.toggle('open', !isOpen);
+  });
+
+  // Close on outside click
+  document.addEventListener('click', (e) => {
+    if (!btn.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.style.display = 'none';
+      btn.classList.remove('open');
+    }
+  });
+
+  // Handle selection
+  dropdown.addEventListener('click', (e) => {
+    const item = e.target.closest('.month-dropdown-item');
+    if (!item) return;
+
+    // Update selected state
+    dropdown.querySelectorAll('.month-dropdown-item').forEach(i => i.classList.remove('selected'));
+    item.classList.add('selected');
+
+    // Update button text
+    selectedText.textContent = item.textContent.trim();
+
+    // Close dropdown
+    dropdown.style.display = 'none';
+    btn.classList.remove('open');
+
+    // Update dashboard
+    const mes = item.dataset.mes;
+    const anio = item.dataset.anio;
+    
+    if (mes && anio) {
+      // Filter by specific month
+      SELECTED_PERIOD = { mes, anio: parseInt(anio) };
+      renderDashboardFromCache();
+    } else {
+      // Show all months
+      SELECTED_PERIOD = null;
+      renderDashboardFromCache();
+    }
+  });
+}
 </script>
 </body>
 </html>
