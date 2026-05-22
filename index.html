@@ -1294,7 +1294,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
 // ============================================================
 // CONFIG
 // ============================================================
-const API_URL = 'https://script.google.com/macros/s/AKfycbxTD5XLPSS2pmJXLJ16MRYyUx8Q31Ewo81HmbBd9_77x88kM12akiKfEItebw-KUQxqJw/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbw6YrNEwA5Hjt0U_TOVbgrC_BdzIXkH1egY1aN6XjXoDdjbxYAAu1gHWGZzdzuKs_dFRw/exec';
 
 let TOKEN = localStorage.getItem('dash_token') || '';
 let CACHE = { ingresos:[], gastos:[], equipo:[], subs:[], ventas:[], cuentas:[], movimientos:[] };
@@ -1386,6 +1386,9 @@ async function showApp() {
     CACHE.subs = JSON.parse(localStorage.getItem('dash_subs') || '[]');
   } catch(e) {}
 
+  // Load tesoreria from Sheet
+  await loadTesoreriaFromSheet();
+  
   document.getElementById('global-loader').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   actualizarInfoTasa();
@@ -1396,6 +1399,7 @@ async function showApp() {
   renderEquipo();
   renderSubs();
   renderCuotas();
+  renderTesoreria();
 }
 
 // ============================================================
