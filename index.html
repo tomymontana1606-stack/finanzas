@@ -358,6 +358,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
 
 /* GLOBAL LOADER */
 #global-loader { position:fixed; inset:0; background:var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:500; gap:16px; }
+@media (max-width:900px) {
   .metrics-grid,.subs-stats { grid-template-columns:repeat(2,1fr); }
   .charts-row { grid-template-columns:1fr; }
 }
@@ -1294,7 +1295,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
 // ============================================================
 // CONFIG
 // ============================================================
-const API_URL = 'https://script.google.com/macros/s/AKfycbw6YrNEwA5Hjt0U_TOVbgrC_BdzIXkH1egY1aN6XjXoDdjbxYAAu1gHWGZzdzuKs_dFRw/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycby8HarjoDseXYtV5dfsh-_nCVUt_VVMeB7zjQNinpOsV9qr9BoUt8IOLb3UwN5XmmvHzA/exec';
 
 let TOKEN = localStorage.getItem('dash_token') || '';
 let CACHE = { ingresos:[], gastos:[], equipo:[], subs:[], ventas:[], cuentas:[], movimientos:[] };
@@ -2927,18 +2928,36 @@ function actualizarInfoTasa() {
 }
 function getCuentas()       { return CACHE.cuentas || []; }
 function getMovimientos()   { return CACHE.movimientos || []; }
+function loadCuentasLocal() { return JSON.parse(localStorage.getItem('tesoreria_cuentas') || '[]'); }
+function loadMovsLocal()    { return JSON.parse(localStorage.getItem('tesoreria_movs') || '[]'); }
+function saveCuentasLocal(cuentas) { localStorage.setItem('tesoreria_cuentas', JSON.stringify(cuentas || [])); }
+function saveMovsLocal(movs)       { localStorage.setItem('tesoreria_movs', JSON.stringify(movs || [])); }
+function makeLocalId(prefix) { return prefix + '_' + Date.now() + '_' + Math.random().toString(36).slice(2,8); }
+
 async function loadTesoreriaFromSheet() {
   try {
     const [rCtas, rMovs] = await Promise.all([
       api({ action: 'getCuentas' }),
       api({ action: 'getMovimientos' })
     ]);
-    CACHE.cuentas = rCtas.data || [];
-    CACHE.movimientos = rMovs.data || [];
+
+    if (rCtas && rCtas.ok && Array.isArray(rCtas.data)) {
+      CACHE.cuentas = rCtas.data;
+      saveCuentasLocal(CACHE.cuentas);
+    } else {
+      CACHE.cuentas = loadCuentasLocal();
+    }
+
+    if (rMovs && rMovs.ok && Array.isArray(rMovs.data)) {
+      CACHE.movimientos = rMovs.data;
+      saveMovsLocal(CACHE.movimientos);
+    } else {
+      CACHE.movimientos = loadMovsLocal();
+    }
   } catch(e) {
-    console.error('Error cargando tesorería:', e);
-    CACHE.cuentas = [];
-    CACHE.movimientos = [];
+    console.warn('Tesorería usando localStorage porque el Sheet/API no respondió:', e);
+    CACHE.cuentas = loadCuentasLocal();
+    CACHE.movimientos = loadMovsLocal();
   }
 }
 
@@ -3073,6 +3092,7 @@ function toggleMovTipo() {
 async function saveCuenta() {
   const nombre = document.getElementById('cta-nombre').value.trim();
   if (!nombre) { showToast('Ingresá el nombre','err'); return; }
+
   const c = {
     nombre,
     emoji:  document.getElementById('cta-emoji').value.trim() || '💵',
@@ -3081,34 +3101,50 @@ async function saveCuenta() {
     saldoInicial: parseFloat(document.getElementById('cta-saldo').value) || 0,
     desc:   document.getElementById('cta-desc').value.trim()
   };
+
   try {
     const res = await api({ action: 'addCuenta', ...c });
-    if (res.ok) {
-      CACHE.cuentas.push({ ...c, id: res.id });
-      renderTesoreria();
-      showToast('Cuenta agregada ✓','ok');
-      closeModal('cuenta');
-      clearForm(['cta-nombre','cta-emoji','cta-saldo','cta-desc']);
-    } else {
-      showToast('Error al guardar','err');
-    }
+    const nuevaCuenta = { ...c, id: (res && res.ok && res.id) ? res.id : makeLocalId('CTA') };
+    CACHE.cuentas.push(nuevaCuenta);
+    saveCuentasLocal(CACHE.cuentas);
+    renderTesoreria();
+    showToast('Cuenta agregada ✓','ok');
+    closeModal('cuenta');
+    clearForm(['cta-nombre','cta-emoji','cta-saldo','cta-desc']);
   } catch(e) {
-    showToast('Error de conexión','err');
+    const nuevaCuenta = { ...c, id: makeLocalId('CTA') };
+    CACHE.cuentas.push(nuevaCuenta);
+    saveCuentasLocal(CACHE.cuentas);
+    renderTesoreria();
+    showToast('Cuenta guardada localmente ✓','ok');
+    closeModal('cuenta');
+    clearForm(['cta-nombre','cta-emoji','cta-saldo','cta-desc']);
   }
 }
 
 async function deleteCuenta(id) {
   if (!confirm('¿Eliminar esta cuenta? Se perderán los movimientos asociados.')) return;
+
+  const borrarLocal = () => {
+    CACHE.cuentas = CACHE.cuentas.filter(c => c.id !== id);
+    CACHE.movimientos = CACHE.movimientos.filter(m => m.cuentaId !== id && m.cuentaDestId !== id);
+    saveCuentasLocal(CACHE.cuentas);
+    saveMovsLocal(CACHE.movimientos);
+    renderTesoreria();
+  };
+
   try {
     const res = await api({ action: 'deleteCuenta', id });
-    if (res.ok) {
-      CACHE.cuentas = CACHE.cuentas.filter(c => c.id !== id);
-      CACHE.movimientos = CACHE.movimientos.filter(m => m.cuentaId !== id && m.cuentaDestId !== id);
-      renderTesoreria();
+    if (res && res.ok) {
+      borrarLocal();
       showToast('Cuenta eliminada','ok');
+    } else {
+      borrarLocal();
+      showToast('Cuenta eliminada localmente','ok');
     }
   } catch(e) {
-    showToast('Error al eliminar','err');
+    borrarLocal();
+    showToast('Cuenta eliminada localmente','ok');
   }
 }
 
@@ -3119,33 +3155,53 @@ async function saveMovimiento() {
   const cuentaDestId = document.getElementById('mov-cuenta-dest').value;
   const desc       = document.getElementById('mov-desc').value.trim();
   const monto      = parseFloat(document.getElementById('mov-monto').value);
+
   if (!monto || !cuentaId) { showToast('Completá los campos requeridos','err'); return; }
-  if (tipo==='transferencia' && cuentaId===cuentaDestId) { showToast('Las cuentas deben ser diferentes','err'); return; }
+  if (tipo==='transferencia' && (!cuentaDestId || cuentaId===cuentaDestId)) { showToast('Elegí dos cuentas diferentes','err'); return; }
+
+  const mov = { tipo, fecha, cuentaId, cuentaDestId, desc, monto };
+
   try {
-    const res = await api({ action: 'addMovimiento', tipo, fecha, cuentaId, cuentaDestId, desc, monto });
-    if (res.ok) {
-      CACHE.movimientos.push({ id: res.id, tipo, fecha, cuentaId, cuentaDestId, desc, monto });
-      renderTesoreria();
-      showToast('Movimiento registrado ✓','ok');
-      closeModal('movimiento');
-      clearForm(['mov-desc','mov-monto']);
-    }
+    const res = await api({ action: 'addMovimiento', ...mov });
+    const nuevoMov = { ...mov, id: (res && res.ok && res.id) ? res.id : makeLocalId('MOV') };
+    CACHE.movimientos.push(nuevoMov);
+    saveMovsLocal(CACHE.movimientos);
+    renderTesoreria();
+    showToast('Movimiento registrado ✓','ok');
+    closeModal('movimiento');
+    clearForm(['mov-desc','mov-monto']);
   } catch(e) {
-    showToast('Error al guardar','err');
+    const nuevoMov = { ...mov, id: makeLocalId('MOV') };
+    CACHE.movimientos.push(nuevoMov);
+    saveMovsLocal(CACHE.movimientos);
+    renderTesoreria();
+    showToast('Movimiento guardado localmente ✓','ok');
+    closeModal('movimiento');
+    clearForm(['mov-desc','mov-monto']);
   }
 }
 
 async function deleteMovimiento(id) {
   if (!confirm('¿Eliminar este movimiento?')) return;
+
+  const borrarLocal = () => {
+    CACHE.movimientos = CACHE.movimientos.filter(m => m.id !== id);
+    saveMovsLocal(CACHE.movimientos);
+    renderTesoreria();
+  };
+
   try {
     const res = await api({ action: 'deleteMovimiento', id });
-    if (res.ok) {
-      CACHE.movimientos = CACHE.movimientos.filter(m => m.id !== id);
-      renderTesoreria();
+    if (res && res.ok) {
+      borrarLocal();
       showToast('Eliminado','ok');
+    } else {
+      borrarLocal();
+      showToast('Eliminado localmente','ok');
     }
   } catch(e) {
-    showToast('Error al eliminar','err');
+    borrarLocal();
+    showToast('Eliminado localmente','ok');
   }
 }
 
