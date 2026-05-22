@@ -1295,7 +1295,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
 // ============================================================
 // CONFIG
 // ============================================================
-const API_URL = 'https://script.google.com/macros/s/AKfycbzczdQFr0NHZZoqLB9gYRTeERPBLI20lq7W0NSXyTzl_KIMCrXWskyo8axP-hL3b0ax1Q/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxI_d6SGxrgXVVvD8H4nmH81TYOBdomysAvDuaCoo-EdEjoR67AORuU8eh5btBg-Bx_3g/exec';
 
 let TOKEN = localStorage.getItem('dash_token') || '';
 let CACHE = { ingresos:[], gastos:[], equipo:[], subs:[], ventas:[], cuentas:[], movimientos:[] };
@@ -3342,70 +3342,22 @@ async function restaurarFactory() {
   if (!confirm('⚠️ ¿Restaurar de fábrica?\nSe borrarán TODOS los datos del navegador Y del Google Sheet:\n- Ingresos\n- Gastos\n- Equipo\n- Suscripciones\n- Cuentas\n- Movimientos\n- Ventas/cuotas locales\n\nEsta acción no se puede deshacer.')) return;
   if (!confirm('Última confirmación. ¿Borrar absolutamente todo?')) return;
 
-  showToast('Restaurando... borrando Google Sheet primero', 'ok');
+  showToast('Restaurando... limpiando Google Sheet', 'ok');
 
-  // IMPORTANTE:
-  // No limpiar localStorage antes de borrar el Sheet.
-  // Si se borra dash_token primero, las llamadas al backend quedan "No autorizado".
   const tokenBackup = TOKEN || localStorage.getItem('dash_token') || '';
 
-  const getDataSafe = async (action) => {
-    try {
-      const r = await api({ action });
-      if (!r || r.ok === false) {
-        console.warn(`No se pudo leer ${action}:`, r);
-        return [];
-      }
-      return r.data || [];
-    } catch (err) {
-      console.warn(`Error leyendo ${action}:`, err);
-      return [];
-    }
-  };
-
-  const deleteSafe = async (action, id) => {
-    if (!id) return { ok:false, error:'ID vacío' };
-    try {
-      return await api({ action, id });
-    } catch (err) {
-      console.warn(`Error borrando ${action} ${id}:`, err);
-      return { ok:false, error:err.message };
-    }
-  };
-
   try {
-    const [ingresos, gastos, equipo, subs, cuentas, movimientos] = await Promise.all([
-      getDataSafe('getIngresos'),
-      getDataSafe('getGastos'),
-      getDataSafe('getEquipo'),
-      getDataSafe('getSubs'),
-      getDataSafe('getCuentas'),
-      getDataSafe('getMovimientos')
-    ]);
+    const res = await api({ action:'clearAllData' });
+    console.log('clearAllData result:', res);
 
-    const deletes = [
-      ...ingresos.map(r => deleteSafe('deleteIngreso', r.id)),
-      ...gastos.map(r => deleteSafe('deleteGasto', r.id)),
-      ...equipo.map(r => deleteSafe('deleteMiembro', r.id)),
-      ...subs.map(r => deleteSafe('deleteSub', r.id)),
-      ...movimientos.map(r => deleteSafe('deleteMovimiento', r.id)),
-      ...cuentas.map(r => deleteSafe('deleteCuenta', r.id))
-    ];
-
-    const results = await Promise.allSettled(deletes);
-    const fallidos = results.filter(r => r.status === 'rejected' || (r.value && r.value.ok === false));
-
-    if (fallidos.length) {
-      console.warn('Algunos registros no se borraron:', fallidos);
-      showToast(`Restauración parcial: ${fallidos.length} registros no se pudieron borrar`, 'err');
-    } else {
-      showToast('Sheet limpiado correctamente ✓', 'ok');
+    if (!res || res.ok !== true) {
+      showToast('El backend no limpió el Sheet. Revisá consola.', 'err');
+      console.error('clearAllData falló:', res);
+      alert('No se pudo limpiar el Sheet. Causa probable: Apps Script no está actualizado/deployado con clearAllData.');
+      return;
     }
 
-    // Ahora sí limpiar navegador.
     localStorage.clear();
-
-    // Mantener sesión para que la app no quede deslogueada después del reload.
     if (tokenBackup) {
       TOKEN = tokenBackup;
       localStorage.setItem('dash_token', tokenBackup);
@@ -3419,30 +3371,16 @@ async function restaurarFactory() {
     CACHE.cuentas = [];
     CACHE.movimientos = [];
 
-    renderDashboardFromCache();
-    renderIngresosFromCache();
-    renderGastosFromCache();
-    renderEquipo();
-    renderSubs();
-    renderCuotas();
-    renderTesoreria();
-    renderConfigInfo();
-
-    showToast('Todo restaurado — recargando...', 'ok');
-    setTimeout(() => location.reload(), 1200);
+    showToast('Todo restaurado correctamente ✓', 'ok');
+    setTimeout(() => location.reload(), 900);
 
   } catch (err) {
     console.error('Error restaurando de fábrica:', err);
     showToast('Error restaurando. Revisá consola.', 'err');
-
-    // Aun si falla el Sheet, limpiar lo local sin borrar la sesión.
-    localStorage.clear();
-    if (tokenBackup) {
-      TOKEN = tokenBackup;
-      localStorage.setItem('dash_token', tokenBackup);
-    }
+    alert('Error restaurando. Abrí consola y mirá el error.');
   }
 }
+
 function limpiarDatosPrueba() {
   if (!confirm('¿Limpiar TODOS los datos de prueba (locales y del Sheet)?')) return;
   restaurarFactory();
@@ -3453,25 +3391,19 @@ async function cargarDatosPrueba() {
 
   showToast('🧹 Limpiando datos anteriores...', 'ok');
 
-  // Limpiar Sheet primero
+  // Limpiar Sheet primero con acción atómica del backend
   try {
-    const [rIng, rGas, rEq, rCtas, rMovs] = await Promise.all([
-      api({ action:'getIngresos', mes:'', anio:'' }),
-      api({ action:'getGastos',   mes:'', anio:'' }),
-      api({ action:'getEquipo' }),
-      api({ action:'getCuentas' }),
-      api({ action:'getMovimientos' })
-    ]);
-
-    await Promise.all([
-      ...(rIng.data || []).map(r => api({ action:'deleteIngreso', id:r.id })),
-      ...(rGas.data || []).map(r => api({ action:'deleteGasto', id:r.id })),
-      ...(rEq.data || []).map(r => api({ action:'deleteMiembro', id:r.id })),
-      ...(rMovs.data || []).map(r => api({ action:'deleteMovimiento', id:r.id })),
-      ...(rCtas.data || []).map(r => api({ action:'deleteCuenta', id:r.id }))
-    ]);
+    const clearRes = await api({ action:'clearAllData' });
+    console.log('clearAllData antes de escenario:', clearRes);
+    if (!clearRes || clearRes.ok !== true) {
+      showToast('No se pudo limpiar el Sheet antes de cargar escenario', 'err');
+      console.error('clearAllData falló:', clearRes);
+      return;
+    }
   } catch(e) {
     console.warn('Error limpiando Sheet:', e);
+    showToast('Error limpiando Sheet antes del escenario', 'err');
+    return;
   }
 
   // Limpiar localStorage sin romper el token actual en memoria
