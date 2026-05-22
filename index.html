@@ -489,7 +489,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
               <div style="font-size:10px;color:var(--muted);margin-top:2px">sin cobrar</div>
             </div>
             <div style="background:var(--surface);border-radius:10px;padding:14px;border-left:3px solid #FF9500">
-              <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Próximo mes</div>
+              <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Próximos 30 días</div>
               <div id="dcs-proximo" style="font-size:22px;font-weight:700;color:#FF9500;margin-top:4px">—</div>
               <div style="font-size:10px;color:var(--muted);margin-top:2px">por vencer</div>
             </div>
@@ -1418,6 +1418,119 @@ function getPeriod(id) {
   return { mes, anio };
 }
 
+
+// ============================================================
+// FECHAS SEGURAS — evita confundir DD/MM/YYYY con MM/DD/YYYY
+// ============================================================
+function parseDateSafe(value) {
+  if (!value) return null;
+
+  if (Object.prototype.toString.call(value) === '[object Date]') {
+    if (isNaN(value.getTime())) return null;
+    return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+  }
+
+  const raw = String(value).trim();
+  if (!raw) return null;
+  const s = raw.split('T')[0].trim();
+
+  // YYYY-MM-DD
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) {
+    const y = Number(m[1]), mo = Number(m[2]), d = Number(m[3]);
+    const date = new Date(y, mo - 1, d);
+    return isNaN(date.getTime()) ? null : date;
+  }
+
+  // DD/MM/YYYY o DD-MM-YYYY
+  m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m) {
+    const d = Number(m[1]), mo = Number(m[2]), y = Number(m[3]);
+    const date = new Date(y, mo - 1, d);
+    return isNaN(date.getTime()) ? null : date;
+  }
+
+  const fallback = new Date(raw);
+  if (isNaN(fallback.getTime())) return null;
+  return new Date(fallback.getFullYear(), fallback.getMonth(), fallback.getDate());
+}
+
+function todaySafe() {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function addDaysSafe(date, days) {
+  const d = parseDateSafe(date);
+  if (!d) return null;
+  const copy = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  copy.setDate(copy.getDate() + days);
+  return copy;
+}
+
+function sameMonthSafe(a, b) {
+  const da = parseDateSafe(a);
+  const db = parseDateSafe(b);
+  if (!da || !db) return false;
+  return da.getMonth() === db.getMonth() && da.getFullYear() === db.getFullYear();
+}
+
+function isCuotaVencida(cuota, hoy = todaySafe()) {
+  if (!cuota || cuota.pagada || !cuota.vence) return false;
+  const vence = parseDateSafe(cuota.vence);
+  return !!vence && vence < hoy;
+}
+
+function isCuotaPorVencer(cuota, dias = 30, hoy = todaySafe()) {
+  if (!cuota || cuota.pagada || !cuota.vence) return false;
+  const vence = parseDateSafe(cuota.vence);
+  if (!vence) return false;
+  const limite = addDaysSafe(hoy, dias);
+  return vence >= hoy && vence <= limite;
+}
+
+function isCuotaCobradaEsteMes(cuota, hoy = todaySafe()) {
+  if (!cuota || !cuota.pagada || !cuota.fechaCobro) return false;
+  return sameMonthSafe(cuota.fechaCobro, hoy);
+}
+
+function getCuotasPendientesData(ventas = JSON.parse(localStorage.getItem('dash_ventas') || '[]')) {
+  const hoy = todaySafe();
+  const limite7 = addDaysSafe(hoy, 7);
+  const limite30 = addDaysSafe(hoy, 30);
+  const data = {
+    totalPendiente: 0,
+    vencidas: [],
+    proximas7: [],
+    proximas30: [],
+    cobradasEsteMes: 0,
+    cuotasPendientes: []
+  };
+
+  ventas.forEach(v => {
+    const cuotas = Array.isArray(v.cuotas) ? v.cuotas : [];
+    cuotas.forEach(c => {
+      if (!c) return;
+      if (c.pagada) {
+        if (isCuotaCobradaEsteMes(c, hoy)) data.cobradasEsteMes++;
+        return;
+      }
+
+      const monto = Number(c.monto || 0);
+      data.totalPendiente += monto;
+      const vence = parseDateSafe(c.vence);
+      const item = { cliente:v.cliente, vendedor:v.vendedor, cuota:c.num, total:v.nCuotas, monto, vence:c.vence, venta:v, cuotaObj:c };
+      data.cuotasPendientes.push(item);
+
+      if (vence && vence < hoy) data.vencidas.push(item);
+      else if (vence && vence >= hoy && vence <= limite7) data.proximas7.push(item);
+      else if (vence && vence > limite7 && vence <= limite30) data.proximas30.push(item);
+    });
+  });
+
+  return data;
+}
+
 // ============================================================
 // DASHBOARD
 // ============================================================
@@ -1519,79 +1632,51 @@ function renderAlertas() {
   const container = document.getElementById('dash-alertas');
   if (!container) return;
 
-  const hoy     = new Date(); hoy.setHours(0,0,0,0);
-  const fin7    = new Date(hoy); fin7.setDate(fin7.getDate() + 7);
-  const fin30   = new Date(hoy); fin30.setDate(fin30.getDate() + 30);
+  const ventas = JSON.parse(localStorage.getItem('dash_ventas') || '[]');
+  const resumen = getCuotasPendientesData(ventas);
   const alertas = [];
 
-  // ── CUOTAS VENCIDAS (sin cobrar) ────────────────────────
-  const ventas = JSON.parse(localStorage.getItem('dash_ventas') || '[]');
-  const vencidas = [];
-  ventas.forEach(v => {
-    v.cuotas.forEach(c => {
-      if (!c.pagada && c.vence) {
-        const vd = new Date(c.vence); vd.setHours(0,0,0,0);
-        if (vd < hoy) vencidas.push({ cliente:v.cliente, cuota:c.num, total:v.nCuotas, monto:c.monto, vence:c.vence, vendedor:v.vendedor });
-      }
-    });
-  });
-  if (vencidas.length > 0) {
-    const totalVencido = vencidas.reduce((s,c) => s + c.monto, 0);
+  if (resumen.vencidas.length > 0) {
+    const totalVencido = resumen.vencidas.reduce((s,c) => s + c.monto, 0);
     alertas.push({
-      tipo: 'urgente', icono: '🔴',
-      titulo: `${vencidas.length} cuota${vencidas.length>1?'s':''} vencida${vencidas.length>1?'s':''} sin cobrar`,
-      desc: vencidas.slice(0,3).map(c => `${c.cliente} — Cuota ${c.cuota}/${c.total} (venció ${fmtFecha(c.vence)})`).join('\n') + (vencidas.length > 3 ? `\n+${vencidas.length-3} más` : ''),
+      tipo: 'urgente',
+      icono: '🔴',
+      titulo: `${resumen.vencidas.length} cuota${resumen.vencidas.length>1?'s':''} vencida${resumen.vencidas.length>1?'s':''} sin cobrar`,
+      desc: resumen.vencidas.slice(0,3).map(c => `${c.cliente} — Cuota ${c.cuota}/${c.total} (venció ${fmtFecha(c.vence)})`).join('\n') + (resumen.vencidas.length > 3 ? `\n+${resumen.vencidas.length-3} más` : ''),
       monto: fmt(totalVencido) + ' pendiente'
     });
   }
 
-  // ── CUOTAS QUE VENCEN ESTA SEMANA ───────────────────────
-  const proximas7 = [];
-  ventas.forEach(v => {
-    v.cuotas.forEach(c => {
-      if (!c.pagada && c.vence) {
-        const vd = new Date(c.vence); vd.setHours(0,0,0,0);
-        if (vd >= hoy && vd <= fin7) proximas7.push({ cliente:v.cliente, cuota:c.num, total:v.nCuotas, monto:c.monto, vence:c.vence });
-      }
-    });
-  });
-  if (proximas7.length > 0) {
-    const total7 = proximas7.reduce((s,c) => s + c.monto, 0);
+  if (resumen.proximas7.length > 0) {
+    const total7 = resumen.proximas7.reduce((s,c) => s + c.monto, 0);
     alertas.push({
-      tipo: 'warning', icono: '⏰',
-      titulo: `${proximas7.length} cuota${proximas7.length>1?'s':''} vence${proximas7.length===1?'':'n'} esta semana`,
-      desc: proximas7.map(c => `${c.cliente} — ${fmtFecha(c.vence)} · Cuota ${c.cuota}/${c.total}`).join('\n'),
+      tipo: 'warning',
+      icono: '⏰',
+      titulo: `${resumen.proximas7.length} cuota${resumen.proximas7.length>1?'s':''} vence${resumen.proximas7.length===1?'':'n'} en 7 días`,
+      desc: resumen.proximas7.slice(0,4).map(c => `${c.cliente} — ${fmtFecha(c.vence)} · Cuota ${c.cuota}/${c.total}`).join('\n') + (resumen.proximas7.length > 4 ? `\n+${resumen.proximas7.length-4} más` : ''),
       monto: fmt(total7) + ' por cobrar'
     });
   }
 
-  // ── CUOTAS QUE VENCEN ESTE MES (8-30 días) ──────────────
-  const proximas30 = [];
-  ventas.forEach(v => {
-    v.cuotas.forEach(c => {
-      if (!c.pagada && c.vence) {
-        const vd = new Date(c.vence); vd.setHours(0,0,0,0);
-        if (vd > fin7 && vd <= fin30) proximas30.push({ cliente:v.cliente, cuota:c.num, total:v.nCuotas, monto:c.monto, vence:c.vence });
-      }
-    });
-  });
-  if (proximas30.length > 0) {
-    const total30 = proximas30.reduce((s,c) => s + c.monto, 0);
+  if (resumen.proximas30.length > 0) {
+    const total30 = resumen.proximas30.reduce((s,c) => s + c.monto, 0);
     alertas.push({
-      tipo: 'info', icono: '📅',
-      titulo: `${proximas30.length} cuota${proximas30.length>1?'s':''} vence${proximas30.length===1?'':'n'} este mes`,
-      desc: proximas30.map(c => `${c.cliente} — ${fmtFecha(c.vence)}`).join('\n'),
+      tipo: 'info',
+      icono: '📅',
+      titulo: `${resumen.proximas30.length} cuota${resumen.proximas30.length>1?'s':''} próxima${resumen.proximas30.length>1?'s':''} dentro de 30 días`,
+      desc: resumen.proximas30.slice(0,4).map(c => `${c.cliente} — ${fmtFecha(c.vence)} · Cuota ${c.cuota}/${c.total}`).join('\n') + (resumen.proximas30.length > 4 ? `\n+${resumen.proximas30.length-4} más` : ''),
       monto: fmt(total30) + ' esperado'
     });
   }
 
-  // ── SUSCRIPCIONES QUE VENCEN PRONTO ─────────────────────
+  const hoy = todaySafe();
+  const fin7 = addDaysSafe(hoy, 7);
   const subsVencen = CACHE.subs.filter(s => {
     if (!s.vence || s.ciclo === 'gratis') return false;
-    const v = new Date(s.vence); v.setHours(0,0,0,0);
-    const diff = (v - hoy) / 86400000;
-    return diff >= 0 && diff <= 7;
+    const v = parseDateSafe(s.vence);
+    return !!v && v >= hoy && v <= fin7;
   });
+
   if (subsVencen.length > 0) {
     alertas.push({
       tipo: 'warning', icono: '🔗',
@@ -1611,7 +1696,7 @@ function renderAlertas() {
       <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:12px">Alertas del período</div>
       <div class="alertas-grid">
         ${alertas.map(a => `
-          <div class="alerta-card ${a.tipo}" onclick="showSection('${a.tipo==='info'||a.tipo==='warning'?'cuotas':'cuotas'}', document.querySelector('.nav-item:nth-child(5)'))">
+          <div class="alerta-card ${a.tipo}" onclick="showSection('cuotas', document.querySelector('.nav-item:nth-child(5)'))">
             <div class="alerta-icon">${a.icono}</div>
             <div style="flex:1;min-width:0">
               <div class="alerta-titulo">${a.titulo}</div>
@@ -1750,38 +1835,17 @@ function renderChartGastos(porCat) {
 }
 
 function renderChartDonut() {
-  // Reemplazado por widget de cuotas — actualizar stats
+  // Widget "Cuotas a cobrar" del Dashboard.
+  // Usa la misma lógica que Alertas y Cuotas para evitar números contradictorios.
   const ventas = JSON.parse(localStorage.getItem('dash_ventas') || '[]');
-  const hoy = new Date(); hoy.setHours(0,0,0,0);
-  const finMes = new Date(hoy.getFullYear(), hoy.getMonth()+2, 0);
-  let total = 0, vencidas = 0, proximo = 0, cobradas = 0;
-  const mesActual = hoy.getMonth(), anioActual = hoy.getFullYear();
-  ventas.forEach(v => {
-    const cobradoEnCuotas = (v.cuotas||[]).filter(c=>c.pagada).reduce((s,c)=>s+(c.montoCobrado||c.monto),0);
-    const saldoReal = Math.max(0, v.total - (v.adelanto||0) - cobradoEnCuotas);
-    total += saldoReal;
-    (v.cuotas||[]).forEach(c => {
-      if (c.pagada) {
-        if (c.fechaCobro) {
-          const fc = new Date(c.fechaCobro+'T00:00:00');
-          if (fc.getMonth()===mesActual && fc.getFullYear()===anioActual) cobradas++;
-        }
-      } else if (c.vence) {
-        const pts = c.vence.split('/');
-        if (pts.length===3) {
-          const [d,m,y] = pts.map(Number);
-          const vd = new Date(y,m-1,d); vd.setHours(0,0,0,0);
-          if (vd < hoy) vencidas++;
-          else if (vd <= finMes) proximo++;
-        }
-      }
-    });
-  });
+  const resumen = getCuotasPendientesData(ventas);
+  const porVencer30 = resumen.proximas7.length + resumen.proximas30.length;
+
   const el = id => document.getElementById(id);
-  if (el('dcs-total'))    el('dcs-total').textContent    = fmt(total);
-  if (el('dcs-vencidas')) el('dcs-vencidas').textContent = vencidas;
-  if (el('dcs-proximo'))  el('dcs-proximo').textContent  = proximo;
-  if (el('dcs-cobradas')) el('dcs-cobradas').textContent = cobradas;
+  if (el('dcs-total'))    el('dcs-total').textContent    = fmt(resumen.totalPendiente);
+  if (el('dcs-vencidas')) el('dcs-vencidas').textContent = resumen.vencidas.length;
+  if (el('dcs-proximo'))  el('dcs-proximo').textContent  = porVencer30;
+  if (el('dcs-cobradas')) el('dcs-cobradas').textContent = resumen.cobradasEsteMes;
 }
 
 // ============================================================
@@ -2151,43 +2215,40 @@ async function deleteGasto(id) {
 // ============================================================
 function renderCuotas() {
   const ventas = JSON.parse(localStorage.getItem('dash_ventas') || '[]');
-  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const hoy = todaySafe();
   const container = document.getElementById('ventas-cuotas-list');
-  let totalPorCobrar = 0, cuotasVencidas = 0, cuotasCobradas = 0, cuotasPorVencer = 0;
-  const hoyVencer = new Date();
-  const en15dias = new Date(hoyVencer.getTime() + 15 * 24 * 60 * 60 * 1000);
+  const resumen = getCuotasPendientesData(ventas);
+  let cuotasVencidas = 0, cuotasCobradas = 0, cuotasPorVencer = 0;
+
   if (!ventas.length) {
     container.innerHTML = '<div class="empty">Sin ventas con cuotas registradas.<br>Usá "Nueva venta" para registrar una.</div>';
     document.getElementById('cuota-total').textContent = fmt(0);
     document.getElementById('cuota-vencidas').textContent = '0';
     document.getElementById('cuota-cobradas').textContent = '0';
+    document.getElementById('cuota-por-vencer').textContent = '0';
     return;
   }
+
   const html = ventas.map(v => {
-    const pendientes = v.cuotas.filter(c => !c.pagada);
-    const cobradoEnCuotas = v.cuotas.filter(c => c.pagada).reduce((s,c) => s + (c.montoCobrado||c.monto), 0);
+    const cuotas = Array.isArray(v.cuotas) ? v.cuotas : [];
+    const pendientes = cuotas.filter(c => !c.pagada);
+    const cobradoEnCuotas = cuotas.filter(c => c.pagada).reduce((s,c) => s + (c.montoCobrado||c.monto), 0);
     const saldoReal = Math.max(0, v.total - (v.adelanto||0) - cobradoEnCuotas);
-    const subtotal = pendientes.length > 0
-      ? pendientes.reduce((s,c) => s + c.monto, 0)
-      : saldoReal;
-    totalPorCobrar += subtotal;
     const porcentaje = saldoReal === 0 ? 100 : v.nCuotas > 0 ? Math.round(((v.nCuotas - pendientes.length) / v.nCuotas) * 100) : 100;
-    const cuotasHtml = v.cuotas.map((c,i) => {
+
+    const cuotasHtml = cuotas.map((c,i) => {
       let estado = 'pendiente';
-      if (c.pagada) { estado='pagada'; cuotasCobradas++; }
-      else if (c.vence) {
-        const pts = c.vence.split('/');
-        let vd;
-        if (pts.length === 3) {
-          const [dd,mm,yy] = pts.map(Number);
-          vd = new Date(yy, mm-1, dd);
-        } else {
-          vd = new Date(c.vence);
-        }
-        vd.setHours(0,0,0,0);
-        if (vd < hoy) { estado='vencida'; cuotasVencidas++; }
-        else if (vd <= en15dias) { estado='por-vencer'; cuotasPorVencer++; }
+      if (c.pagada) {
+        estado = 'pagada';
+        if (isCuotaCobradaEsteMes(c, hoy)) cuotasCobradas++;
+      } else if (isCuotaVencida(c, hoy)) {
+        estado = 'vencida';
+        cuotasVencidas++;
+      } else if (isCuotaPorVencer(c, 15, hoy)) {
+        estado = 'por-vencer';
+        cuotasPorVencer++;
       }
+
       const infoExtra = c.pagada
         ? `<div class="cobro-info">${c.metodo||''}${c.notas ? ' · ' + c.notas : ''}${c.fechaCobro ? ' · ' + fmtFecha(c.fechaCobro) : ''}${c.montoCobrado && c.montoCobrado !== c.monto ? ' · Cobrado: '+fmt(c.montoCobrado) : ''}</div>`
         : (c._ajuste ? `<div class="cobro-info" style="color:var(--orange)">⚡ ${c._ajuste}</div>` : '');
@@ -2206,19 +2267,11 @@ function renderCuotas() {
           ${acciones}
         </div>`;
     }).join('');
+
+    const tieneVencidas = cuotas.some(c => isCuotaVencida(c, hoy));
     const notasHtml = v.notas ? `<div style="margin-top:8px;padding:8px 10px;background:var(--surface);border-radius:6px;font-size:11px;color:var(--muted)">${v.notas}</div>` : '';
     return `
-      <div class="venta-card ${(() => {
-              const hoy = new Date();
-              const tieneVencidas = v.cuotas.some(c => {
-                if (!c || !c.vence || c.pagada) return false;
-                const pts = c.vence.split('/');
-                if (pts.length !== 3) return false;
-                const [dd, mm, yy] = pts.map(Number);
-                return new Date(yy, mm-1, dd) < new Date();
-              });
-              return (saldoReal > 0 || tieneVencidas) ? 'pendiente' : '';
-            })()}">
+      <div class="venta-card ${(saldoReal > 0 || tieneVencidas) ? 'pendiente' : ''}">
         <div class="venta-header">
           <div>
             <div class="venta-cliente">${v.cliente}${saldoReal > 0 ? ' <span style="color:var(--red);font-size:11px;font-weight:600">⚠️ Saldo: '+fmt(saldoReal)+'</span>' : ''}</div>
@@ -2226,11 +2279,7 @@ function renderCuotas() {
           </div>
           <div style="display:flex;gap:8px;align-items:center">
             <span class="tag tag-gold">${fmt(v.total)}</span>
-            ${(() => {
-              const cobradoEnCuotas = v.cuotas.filter(c => c.pagada).reduce((s,c) => s + (c.montoCobrado||c.monto), 0);
-              const saldoReal = Math.max(0, v.total - (v.adelanto||0) - cobradoEnCuotas);
-              return saldoReal > 0 ? `<button class="btn-icon" onclick="pagarSaldo('${v.id}')" title="Pagar saldo pendiente" style="color:var(--red);border-color:rgba(231,76,60,0.4);padding:6px 12px;width:auto;font-size:11px;font-weight:600">Pagar $${Math.round(saldoReal)}</button>` : '';
-            })()}
+            ${saldoReal > 0 ? `<button class="btn-icon" onclick="pagarSaldo('${v.id}')" title="Pagar saldo pendiente" style="color:var(--red);border-color:rgba(231,76,60,0.4);padding:6px 12px;width:auto;font-size:11px;font-weight:600">Pagar $${Math.round(saldoReal)}</button>` : ''}
             <button class="btn-icon edit" onclick="agregarNotaVenta('${v.id}')" title="Notas">✎</button>
             <button class="btn-icon" onclick="generarReciboPDF('${v.id}')" title="Descargar recibo PDF" style="color:var(--accent);border-color:rgba(37,99,235,0.3)">⬇</button>
             <button class="btn-icon" onclick="eliminarVenta('${v.id}')" title="Eliminar">✕</button>
@@ -2246,21 +2295,24 @@ function renderCuotas() {
         ${notasHtml}
       </div>`;
   }).join('');
+
   container.innerHTML = html;
-  document.getElementById('cuota-total').textContent = fmt(totalPorCobrar);
+  document.getElementById('cuota-total').textContent = fmt(resumen.totalPendiente);
   document.getElementById('cuota-vencidas').textContent = cuotasVencidas;
   document.getElementById('cuota-cobradas').textContent = cuotasCobradas;
   document.getElementById('cuota-por-vencer').textContent = cuotasPorVencer;
 
-  // Color dinámico del indicador
   const cardVencer = document.getElementById('cuota-por-vencer-card');
   const valVencer = document.getElementById('cuota-por-vencer');
   if (cuotasVencidas > 0) {
-    cardVencer.style.borderTopColor = 'var(--red)'; valVencer.style.color = 'var(--red)';
+    cardVencer.style.borderTopColor = 'var(--red)';
+    valVencer.style.color = 'var(--red)';
   } else if (cuotasPorVencer > 0) {
-    cardVencer.style.borderTopColor = '#FF9500'; valVencer.style.color = '#FF9500';
+    cardVencer.style.borderTopColor = '#FF9500';
+    valVencer.style.color = '#FF9500';
   } else {
-    cardVencer.style.borderTopColor = 'var(--green)'; valVencer.style.color = 'var(--green)';
+    cardVencer.style.borderTopColor = 'var(--green)';
+    valVencer.style.color = 'var(--green)';
   }
 }
 
@@ -3715,16 +3767,14 @@ function fmt(n) {
 
 function fmtFecha(f) {
   if (!f) return '—';
-  const s = String(f).split('T')[0];
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-    const [y,m,d] = s.split('-');
-    return `${d}/${m}/${y}`;
-  }
-  return s;
+  const d = parseDateSafe(f);
+  if (!d) return String(f).split('T')[0];
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
 }
 
 function parseFechaLocal(fechaStr) {
-  const d = new Date(fechaStr + 'T00:00:00');
+  const d = parseDateSafe(fechaStr);
+  if (!d) return { mes:'', anio:'' };
   return { mes:MESES[d.getMonth()], anio:d.getFullYear() };
 }
 
