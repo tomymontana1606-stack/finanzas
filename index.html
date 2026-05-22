@@ -2940,6 +2940,12 @@ function actualizarInfoTasa() {
 }
 function getCuentas()       { return CACHE.cuentas || []; }
 function getMovimientos()   { return CACHE.movimientos || []; }
+function loadCuentasLocal() { return JSON.parse(localStorage.getItem('tesoreria_cuentas') || '[]'); }
+function loadMovsLocal()    { return JSON.parse(localStorage.getItem('tesoreria_movs') || '[]'); }
+function saveCuentasLocal(cuentas) { localStorage.setItem('tesoreria_cuentas', JSON.stringify(cuentas || [])); }
+function saveMovsLocal(movs)       { localStorage.setItem('tesoreria_movs', JSON.stringify(movs || [])); }
+function makeLocalId(prefix) { return prefix + '_' + Date.now() + '_' + Math.random().toString(36).slice(2,8); }
+
 async function loadTesoreriaFromSheet() {
   try {
     const [rCtas, rMovs] = await Promise.all([
