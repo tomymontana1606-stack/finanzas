@@ -3338,31 +3338,111 @@ function importarDatos(event) {
   event.target.value = '';
 }
 
-function restaurarFactory() {
-  if (!confirm('⚠️ ¿Restaurar de fábrica?\nSe borrarán TODOS los datos: locales Y del Google Sheet (ingresos, gastos, equipo).\n\nEsta acción no se puede deshacer.')) return;
+async function restaurarFactory() {
+  if (!confirm('⚠️ ¿Restaurar de fábrica?\nSe borrarán TODOS los datos del navegador Y del Google Sheet:\n- Ingresos\n- Gastos\n- Equipo\n- Suscripciones\n- Cuentas\n- Movimientos\n- Ventas/cuotas locales\n\nEsta acción no se puede deshacer.')) return;
   if (!confirm('Última confirmación. ¿Borrar absolutamente todo?')) return;
-  showToast('Restaurando... puede tardar unos segundos','ok');
-  LOCAL_KEYS.forEach(k => localStorage.removeItem(k));
-  localStorage.clear(); // borrar absolutamente todo
-  CACHE.subs = []; CACHE.ventas = []; CACHE.ingresos = []; CACHE.gastos = []; CACHE.equipo = [];
-  const borrarSheet = async () => {
-    const [rIng, rGas, rEq] = await Promise.all([
-      api({ action:'getIngresos', mes:'', anio:'' }),
-      api({ action:'getGastos',   mes:'', anio:'' }),
-      api({ action:'getEquipo' })
-    ]);
-    await Promise.all([
-      ...(rIng.data||[]).map(r => api({ action:'deleteIngreso', id:r.id })),
-      ...(rGas.data||[]).map(r => api({ action:'deleteGasto',   id:r.id })),
-      ...(rEq.data||[]).map(r => api({ action:'deleteMiembro',  id:r.id })),
-    ]);
-    CACHE.ingresos = []; CACHE.gastos = []; CACHE.equipo = [];
-    showToast('Todo restaurado — recargando...','ok');
-    setTimeout(() => location.reload(), 1200);
-  };
-  borrarSheet().catch(() => { showToast('Error limpiando el Sheet','err'); setTimeout(()=>location.reload(),1500); });
-}
 
+  showToast('Restaurando... borrando Google Sheet primero', 'ok');
+
+  // IMPORTANTE:
+  // No limpiar localStorage antes de borrar el Sheet.
+  // Si se borra dash_token primero, las llamadas al backend quedan "No autorizado".
+  const tokenBackup = TOKEN || localStorage.getItem('dash_token') || '';
+
+  const getDataSafe = async (action) => {
+    try {
+      const r = await api({ action });
+      if (!r || r.ok === false) {
+        console.warn(`No se pudo leer ${action}:`, r);
+        return [];
+      }
+      return r.data || [];
+    } catch (err) {
+      console.warn(`Error leyendo ${action}:`, err);
+      return [];
+    }
+  };
+
+  const deleteSafe = async (action, id) => {
+    if (!id) return { ok:false, error:'ID vacío' };
+    try {
+      return await api({ action, id });
+    } catch (err) {
+      console.warn(`Error borrando ${action} ${id}:`, err);
+      return { ok:false, error:err.message };
+    }
+  };
+
+  try {
+    const [ingresos, gastos, equipo, subs, cuentas, movimientos] = await Promise.all([
+      getDataSafe('getIngresos'),
+      getDataSafe('getGastos'),
+      getDataSafe('getEquipo'),
+      getDataSafe('getSubs'),
+      getDataSafe('getCuentas'),
+      getDataSafe('getMovimientos')
+    ]);
+
+    const deletes = [
+      ...ingresos.map(r => deleteSafe('deleteIngreso', r.id)),
+      ...gastos.map(r => deleteSafe('deleteGasto', r.id)),
+      ...equipo.map(r => deleteSafe('deleteMiembro', r.id)),
+      ...subs.map(r => deleteSafe('deleteSub', r.id)),
+      ...movimientos.map(r => deleteSafe('deleteMovimiento', r.id)),
+      ...cuentas.map(r => deleteSafe('deleteCuenta', r.id))
+    ];
+
+    const results = await Promise.allSettled(deletes);
+    const fallidos = results.filter(r => r.status === 'rejected' || (r.value && r.value.ok === false));
+
+    if (fallidos.length) {
+      console.warn('Algunos registros no se borraron:', fallidos);
+      showToast(`Restauración parcial: ${fallidos.length} registros no se pudieron borrar`, 'err');
+    } else {
+      showToast('Sheet limpiado correctamente ✓', 'ok');
+    }
+
+    // Ahora sí limpiar navegador.
+    localStorage.clear();
+
+    // Mantener sesión para que la app no quede deslogueada después del reload.
+    if (tokenBackup) {
+      TOKEN = tokenBackup;
+      localStorage.setItem('dash_token', tokenBackup);
+    }
+
+    CACHE.ingresos = [];
+    CACHE.gastos = [];
+    CACHE.equipo = [];
+    CACHE.subs = [];
+    CACHE.ventas = [];
+    CACHE.cuentas = [];
+    CACHE.movimientos = [];
+
+    renderDashboardFromCache();
+    renderIngresosFromCache();
+    renderGastosFromCache();
+    renderEquipo();
+    renderSubs();
+    renderCuotas();
+    renderTesoreria();
+    renderConfigInfo();
+
+    showToast('Todo restaurado — recargando...', 'ok');
+    setTimeout(() => location.reload(), 1200);
+
+  } catch (err) {
+    console.error('Error restaurando de fábrica:', err);
+    showToast('Error restaurando. Revisá consola.', 'err');
+
+    // Aun si falla el Sheet, limpiar lo local sin borrar la sesión.
+    localStorage.clear();
+    if (tokenBackup) {
+      TOKEN = tokenBackup;
+      localStorage.setItem('dash_token', tokenBackup);
+    }
+  }
+}
 function limpiarDatosPrueba() {
   if (!confirm('¿Limpiar TODOS los datos de prueba (locales y del Sheet)?')) return;
   restaurarFactory();
