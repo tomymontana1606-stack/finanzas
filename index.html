@@ -1289,7 +1289,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
 // ============================================================
 // CONFIG
 // ============================================================
-const API_URL = 'https://script.google.com/macros/s/AKfycbw6YrNEwA5Hjt0U_TOVbgrC_BdzIXkH1egY1aN6XjXoDdjbxYAAu1gHWGZzdzuKs_dFRw/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwJQHtZBHkG3twZwrHzowixxOoh6yazt6LRclUk3ZjXKDLa0HchX83WwNbdsrbMivUcRA/exec';
 
 let TOKEN = localStorage.getItem('dash_token') || '';
 let CACHE = { ingresos:[], gastos:[], equipo:[], subs:[], ventas:[], cuentas:[], movimientos:[] };
@@ -3096,17 +3096,35 @@ async function saveCuenta() {
   };
   try {
     const res = await api({ action: 'addCuenta', ...c });
-    if (res.ok) {
+    console.log('addCuenta response:', res);
+    
+    if (res && res.ok && res.id) {
       CACHE.cuentas.push({ ...c, id: res.id });
+      saveCuentasLocal(CACHE.cuentas);
       renderTesoreria();
       showToast('Cuenta agregada ✓','ok');
       closeModal('cuenta');
       clearForm(['cta-nombre','cta-emoji','cta-saldo','cta-desc']);
     } else {
-      showToast('Error al guardar','err');
+      // Sheet no respondió OK - guardar localmente
+      console.warn('Sheet no OK:', res);
+      const id = makeLocalId('CTA');
+      CACHE.cuentas.push({ ...c, id });
+      saveCuentasLocal(CACHE.cuentas);
+      renderTesoreria();
+      showToast('Cuenta guardada localmente (Sheet: ' + (res.error || 'sin ok') + ')','ok');
+      closeModal('cuenta');
+      clearForm(['cta-nombre','cta-emoji','cta-saldo','cta-desc']);
     }
   } catch(e) {
-    showToast('Error de conexión','err');
+    console.error('Error guardando cuenta:', e);
+    const id = makeLocalId('CTA');
+    CACHE.cuentas.push({ ...c, id });
+    saveCuentasLocal(CACHE.cuentas);
+    renderTesoreria();
+    showToast('Cuenta guardada localmente (error de red)','ok');
+    closeModal('cuenta');
+    clearForm(['cta-nombre','cta-emoji','cta-saldo','cta-desc']);
   }
 }
 
