@@ -934,7 +934,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
             </div>
           </div>
           <div class="metric-value" id="m-roi">—</div>
-          <div class="metric-hint">Ingresos / gasto ADS</div>
+          <div class="metric-hint">Ingresos / gastos totales</div>
           <div class="metric-sparkline" id="spark-roi"></div>
         </div>
       </div>
@@ -2097,8 +2097,8 @@ function calcularGastoAds(gastos) {
   return (gastos || []).filter(isAdsExpense).reduce((s, g) => s + (parseFloat(g.monto) || 0), 0);
 }
 
-function calcularROAS(ingresosTotal, gastoAds) {
-  return gastoAds > 0 ? ingresosTotal / gastoAds : null;
+function calcularROAS(ingresosTotal, gastosTotal) {
+  return gastosTotal > 0 ? ingresosTotal / gastosTotal : null;
 }
 
 function fmtROAS(roas) {
@@ -2159,7 +2159,7 @@ function renderDashboardFromCache() {
   const totalGastos   = gastos.reduce((s,r) => s + r.monto, 0);
   const revenue       = totalIngresos - totalGastos;
   const gastoAds      = calcularGastoAds(gastos);
-  const roas          = calcularROAS(totalIngresos, gastoAds);
+  const roas          = calcularROAS(totalIngresos, totalGastos);
 
   document.getElementById('m-ingresos').textContent = fmt(totalIngresos);
   document.getElementById('m-gastos').textContent   = fmt(totalGastos);
@@ -2178,10 +2178,11 @@ function renderDashboardFromCache() {
     const d = new Date(nowSpark.getFullYear(), nowSpark.getMonth() - i, 1);
     monthsForSpark.push({ mes: MESES[d.getMonth()], anio: d.getFullYear() });
   }
-  const adsData = monthsForSpark.map(m => calcularGastoAds(
-    CACHE.gastos.filter(r => r.mes === m.mes && String(r.anio) === String(m.anio))
-  ));
-  const roasData = ingresosData.map((ing, i) => adsData[i] > 0 ? ing / adsData[i] : 0);
+  const totalGastosData = monthsForSpark.map(m => CACHE.gastos
+    .filter(r => r.mes === m.mes && String(r.anio) === String(m.anio))
+    .reduce((s, r) => s + (parseFloat(r.monto) || 0), 0)
+  );
+  const roasData = ingresosData.map((ing, i) => totalGastosData[i] > 0 ? ing / totalGastosData[i] : 0);
 
   generateSparkline('spark-ingresos', ingresosData, '#F7C948');
   generateSparkline('spark-gastos', gastosData, '#E74C3C');
@@ -2259,7 +2260,7 @@ function renderDashboardFromCache() {
     totalSubs += costoMes;
   });
 
-  renderChartGastos(porCat, { totalIngresos, gastoAds, roas, periodo: mes ? `${mes} ${anio}` : 'Todos los períodos' });
+  renderChartGastos(porCat, { totalIngresos, totalGastos, gastoAds, roas, periodo: mes ? `${mes} ${anio}` : 'Todos los períodos' });
   renderChartDonut();
   renderChartTimeline();
   renderAlertas();
@@ -2587,11 +2588,13 @@ function renderChartGastos(porCat, meta = {}) {
   const data = Object.values(porCat);
 
   const roasText = fmtROAS(meta.roas);
+  const gastosText = fmt(meta.totalGastos || 0);
   const adsText = fmt(meta.gastoAds || 0);
   const roasBadge = `
     <div style="position:absolute;top:-8px;right:0;z-index:2;display:flex;gap:8px;align-items:center;font-size:11px">
       <span style="background:rgba(37,99,235,.12);border:1px solid rgba(37,99,235,.35);color:var(--accent);padding:4px 8px;border-radius:999px;font-weight:600">ROAS ${roasText}</span>
-      <span style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:var(--muted);padding:4px 8px;border-radius:999px">ADS ${adsText}</span>
+      <span style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:var(--muted);padding:4px 8px;border-radius:999px">Gastos ${gastosText}</span>
+      <span style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);color:var(--muted);padding:4px 8px;border-radius:999px">ADS ${adsText}</span>
     </div>`;
 
   if (!labels.length) {
