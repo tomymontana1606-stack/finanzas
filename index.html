@@ -5150,6 +5150,41 @@ function filterByMonth(monthYear) {
   renderChartTimeline();
 }
 
+
+
+function generateMonthMenu() {
+  var menu = document.getElementById('month-menu');
+  var current_year = new Date().getFullYear();
+  var months_es = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  
+  // Limpiar menú
+  menu.innerHTML = '';
+  
+  // Agregar "Todos los meses"
+  var all_option = document.createElement('div');
+  all_option.style.cssText = 'padding:12px;cursor:pointer;border-radius:6px;font-weight:bold;color:#2563EB;transition:all 0.2s';
+  all_option.textContent = '📊 Todos los meses';
+  all_option.onclick = function() { filterByMonth('all'); };
+  menu.appendChild(all_option);
+  
+  // Agregar meses del año actual
+  for(var mes = 1; mes <= 12; mes++) {
+    var option = document.createElement('div');
+    option.style.cssText = 'padding:12px;cursor:pointer;border-radius:6px;transition:all 0.2s;hover:background:rgba(37,99,235,0.2)';
+    option.textContent = months_es[mes] + ' ' + current_year;
+    option.dataset.month = String(mes).padStart(2, '0') + '-' + current_year;
+    option.onclick = function() { 
+      filterByMonth(this.dataset.month); 
+    };
+    menu.appendChild(option);
+  }
+}
+
+// Generar menú cuando carga la página
+document.addEventListener('DOMContentLoaded', function() {
+  generateMonthMenu();
+});
+
 </script>
 </body>
 </html>
