@@ -5080,6 +5080,22 @@ function filterByDays(days) {
 
 
 // ===== FILTRO POR MES =====
+
+
+function toggleMonthMenu() {
+  var menu = document.getElementById('month-menu');
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+document.addEventListener('click', function(e) {
+  var btn = document.getElementById('month-btn');
+  var menu = document.getElementById('month-menu');
+  if(btn && menu && !btn.contains(e.target) && !menu.contains(e.target)) {
+    menu.style.display = 'none';
+  }
+});
+
+
 function filterByMonth(monthYear) {
   // Actualizar texto del botón
   var btn_text = document.getElementById('selected-month');
@@ -5095,21 +5111,27 @@ function filterByMonth(monthYear) {
   // Cerrar menú
   document.getElementById('month-menu').style.display = 'none';
   
+  // Filtrar datos
+  var filtered_ingresos, filtered_gastos;
+  if(monthYear === 'all') {
+    filtered_ingresos = CACHE.ingresos || [];
+    filtered_gastos = CACHE.gastos || [];
   } else {
-    // Filtrar por mes específico
     var parts = monthYear.split('-');
     var mes = parts[0];
     var anio = parts[1];
     
-    var filtered_ingresos = (CACHE.ingresos || []).filter(function(x) {
-      var xmes = String(new Date(x.fecha).getMonth()+1).padStart(2,'0');
-      var xanio = String(new Date(x.fecha).getFullYear());
+    filtered_ingresos = (CACHE.ingresos || []).filter(function(x) {
+      var d = new Date(x.fecha);
+      var xmes = String(d.getMonth()+1).padStart(2, '0');
+      var xanio = String(d.getFullYear());
       return xmes === mes && xanio === anio;
     });
     
-    var filtered_gastos = (CACHE.gastos || []).filter(function(x) {
-      var xmes = String(new Date(x.fecha).getMonth()+1).padStart(2,'0');
-      var xanio = String(new Date(x.fecha).getFullYear());
+    filtered_gastos = (CACHE.gastos || []).filter(function(x) {
+      var d = new Date(x.fecha);
+      var xmes = String(d.getMonth()+1).padStart(2, '0');
+      var xanio = String(d.getFullYear());
       return xmes === mes && xanio === anio;
     });
   }
@@ -5125,7 +5147,6 @@ function filterByMonth(monthYear) {
   var roas = totalIngresos / Math.max(totalGastos, 1);
   document.getElementById('metric-roas').textContent = roas.toFixed(2) + 'x';
   
-  // Renderizar gráficos
   renderChartTimeline();
 }
 
