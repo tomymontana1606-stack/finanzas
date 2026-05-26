@@ -5081,10 +5081,20 @@ function filterByDays(days) {
 
 // ===== FILTRO POR MES =====
 function filterByMonth(monthYear) {
+  // Actualizar texto del botón
+  var btn_text = document.getElementById('selected-month');
   if(monthYear === 'all') {
-    // Mostrar todos los datos
-    var filtered_ingresos = CACHE.ingresos || [];
-    var filtered_gastos = CACHE.gastos || [];
+    btn_text.textContent = '📊 Todos los meses';
+  } else {
+    var parts = monthYear.split('-');
+    var mes = parseInt(parts[0]);
+    var months_es = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    btn_text.textContent = months_es[mes] + ' ' + parts[1];
+  }
+  
+  // Cerrar menú
+  document.getElementById('month-menu').style.display = 'none';
+  
   } else {
     // Filtrar por mes específico
     var parts = monthYear.split('-');
