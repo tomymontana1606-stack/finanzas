@@ -885,15 +885,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
           </div>
         </div>
       </div>
-        <div style="display:flex;gap:8px;align-items:center;margin-left:16px;flex-wrap:wrap">
-          <span style="font-size:12px;color:rgba(255,255,255,0.5);white-space:nowrap">Rango:</span>
-          <button onclick="filterByDays(7)" class="period-filter-btn" data-days="7" style="padding:6px 12px;background:rgba(37,99,235,0.2);border:1px solid #2563EB;color:#2563EB;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;transition:all 0.2s">7 días</button>
-          <button onclick="filterByDays(15)" class="period-filter-btn" data-days="15" style="padding:6px 12px;background:rgba(37,99,235,0.2);border:1px solid #2563EB;color:#2563EB;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;transition:all 0.2s">15 días</button>
-          <button onclick="filterByDays(30)" class="period-filter-btn" data-days="30" style="padding:6px 12px;background:rgba(37,99,235,0.2);border:1px solid #2563EB;color:#2563EB;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;transition:all 0.2s">30 días</button>
-          <button onclick="filterByDays(60)" class="period-filter-btn" data-days="60" style="padding:6px 12px;background:rgba(37,99,235,0.2);border:1px solid #2563EB;color:#2563EB;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;transition:all 0.2s">60 días</button>
-          <button onclick="filterByDays(90)" class="period-filter-btn" data-days="90" style="padding:6px 12px;background:rgba(37,99,235,0.2);border:1px solid #2563EB;color:#2563EB;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;transition:all 0.2s">90 días</button>
-          <button onclick="filterByDays('all')" class="period-filter-btn active" data-days="all" style="padding:6px 12px;background:#2563EB;border:1px solid #2563EB;color:#fff;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;transition:all 0.2s">Total</button>
-        </div>
+        
 
       <div class="metrics-grid">
         <div class="metric-card m-gold">
@@ -5048,6 +5040,75 @@ function filterByDays(days) {
   // Renderizar gráfico
   renderChartTimelineCustom(start, now);
 }
+
+
+
+function generateMonthDropdown() {
+  var dropdown = document.getElementById('month-dropdown');
+  if(!dropdown) return;
+  
+  dropdown.innerHTML = '';
+  var months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  
+  // Agregar meses de 2026
+  for(var i = 0; i < months.length; i++) {
+    var m = i + 1;
+    var month_str = String(m).padStart(2, '0');
+    var opt = document.createElement('div');
+    opt.style.cssText = 'padding:12px;cursor:pointer;border-radius:6px;transition:all 0.2s;color:#fff';
+    opt.textContent = months[i] + ' 2026';
+    opt.onmouseover = function() { this.style.background = 'rgba(37,99,235,0.2)'; };
+    opt.onmouseout = function() { this.style.background = 'none'; };
+    opt.onclick = (function(m) {
+      return function() { 
+        selectMonth(m + '-2026');
+      };
+    })(month_str);
+    dropdown.appendChild(opt);
+  }
+  
+  // Agregar separador
+  var sep = document.createElement('div');
+  sep.style.cssText = 'height:1px;background:rgba(255,255,255,0.1);margin:12px 0';
+  dropdown.appendChild(sep);
+  
+  // Agregar filtros de días
+  var range_label = document.createElement('div');
+  range_label.style.cssText = 'padding:8px 12px;font-size:11px;color:rgba(255,255,255,0.5);font-weight:bold';
+  range_label.textContent = 'RANGO DE DÍAS';
+  dropdown.appendChild(range_label);
+  
+  var days_options = [7, 15, 30, 60, 90];
+  days_options.forEach(function(d) {
+    var opt = document.createElement('div');
+    opt.style.cssText = 'padding:12px;cursor:pointer;border-radius:6px;transition:all 0.2s;color:#fff';
+    opt.textContent = d + ' días';
+    opt.onmouseover = function() { this.style.background = 'rgba(37,99,235,0.2)'; };
+    opt.onmouseout = function() { this.style.background = 'none'; };
+    opt.onclick = function() { filterByDays(d); };
+    dropdown.appendChild(opt);
+  });
+  
+  var opt_all = document.createElement('div');
+  opt_all.style.cssText = 'padding:12px;cursor:pointer;border-radius:6px;transition:all 0.2s;color:#fff';
+  opt_all.textContent = 'Total';
+  opt_all.onmouseover = function() { this.style.background = 'rgba(37,99,235,0.2)'; };
+  opt_all.onmouseout = function() { this.style.background = 'none'; };
+  opt_all.onclick = function() { filterByDays('all'); };
+  dropdown.appendChild(opt_all);
+}
+
+function selectMonth(monthYear) {
+  var text = document.getElementById('selected-month-text');
+  var parts = monthYear.split('-');
+  var m = parseInt(parts[0]);
+  var months = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  text.textContent = months[m] + ' ' + parts[1];
+  document.getElementById('month-dropdown').style.display = 'none';
+}
+
+// Llamar al cargar
+document.addEventListener('DOMContentLoaded', generateMonthDropdown);
 
 </script>
 </body>
