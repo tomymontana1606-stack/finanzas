@@ -883,6 +883,16 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
           <div id="month-dropdown" class="month-dropdown" style="display: none;">
             <!-- Populated by JS -->
           </div>
+<!-- FILTROS POR RANGO DE DÍAS -->
+<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;align-items:center">
+  <span style="font-size:12px;color:rgba(255,255,255,0.5)">Rango:</span>
+  <button onclick="filterByDays(7)" class="period-filter-btn" data-days="7" style="padding:6px 12px;background:rgba(37,99,235,0.2);border:1px solid #2563EB;color:#2563EB;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;transition:all 0.2s">7 días</button>
+  <button onclick="filterByDays(15)" class="period-filter-btn" data-days="15" style="padding:6px 12px;background:rgba(37,99,235,0.2);border:1px solid #2563EB;color:#2563EB;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;transition:all 0.2s">15 días</button>
+  <button onclick="filterByDays(30)" class="period-filter-btn" data-days="30" style="padding:6px 12px;background:rgba(37,99,235,0.2);border:1px solid #2563EB;color:#2563EB;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;transition:all 0.2s">30 días</button>
+  <button onclick="filterByDays(60)" class="period-filter-btn" data-days="60" style="padding:6px 12px;background:rgba(37,99,235,0.2);border:1px solid #2563EB;color:#2563EB;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;transition:all 0.2s">60 días</button>
+  <button onclick="filterByDays(90)" class="period-filter-btn" data-days="90" style="padding:6px 12px;background:rgba(37,99,235,0.2);border:1px solid #2563EB;color:#2563EB;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;transition:all 0.2s">90 días</button>
+  <button onclick="filterByDays('all')" class="period-filter-btn active" data-days="all" style="padding:6px 12px;background:#2563EB;border:1px solid #2563EB;color:#fff;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;transition:all 0.2s">Total</button>
+</div>
         </div>
       </div>
       <div class="metrics-grid">
@@ -5025,6 +5035,90 @@ function initMonthSelector() {
     }
   });
 }
+
+// ===== FILTRO POR RANGO DE DÍAS =====
+function filterByDays(days) {
+  // Actualizar botones activos
+  document.querySelectorAll('.period-filter-btn').forEach(btn => {
+    if(btn.dataset.days === String(days)) {
+      btn.style.background = '#2563EB';
+      btn.style.color = '#fff';
+    } else {
+      btn.style.background = 'rgba(37,99,235,0.2)';
+      btn.style.color = '#2563EB';
+    }
+  });
+  
+  var now = new Date();
+  var start = days === 'all' ? new Date(2020,0,1) : new Date(now.getTime() - days*24*3600*1000);
+  
+  // Filtrar datos
+  var filtered_ingresos = (CACHE.ingresos || []).filter(function(x) {
+    var d = new Date(x.fecha || '');
+    return d >= start && d <= now;
+  });
+  
+  var filtered_gastos = (CACHE.gastos || []).filter(function(x) {
+    var d = new Date(x.fecha || '');
+    return d >= start && d <= now;
+  });
+  
+  // Actualizar métricas
+  var totalIngresos = filtered_ingresos.reduce(function(s,x){return s+(parseFloat(x.monto)||0);},0);
+  var totalGastos = filtered_gastos.reduce(function(s,x){return s+(parseFloat(x.monto)||0);},0);
+  
+  document.getElementById('metric-ingresos').textContent = '$' + fmt(totalIngresos);
+  document.getElementById('metric-gastos').textContent = '$' + fmt(totalGastos);
+  document.getElementById('metric-revenue').textContent = '$' + fmt(totalIngresos - totalGastos);
+  
+  var roas = totalIngresos / Math.max(totalGastos, 1);
+  document.getElementById('metric-roas').textContent = roas.toFixed(2) + 'x';
+  
+  // Renderizar gráficos con datos filtrados
+  renderChartTimelineCustom(start, now);
+}
+
+
+// ===== FILTRO POR MES =====
+function filterByMonth(monthYear) {
+  if(monthYear === 'all') {
+    // Mostrar todos los datos
+    var filtered_ingresos = CACHE.ingresos || [];
+    var filtered_gastos = CACHE.gastos || [];
+  } else {
+    // Filtrar por mes específico
+    var parts = monthYear.split('-');
+    var mes = parts[0];
+    var anio = parts[1];
+    
+    var filtered_ingresos = (CACHE.ingresos || []).filter(function(x) {
+      var xmes = String(new Date(x.fecha).getMonth()+1).padStart(2,'0');
+      var xanio = String(new Date(x.fecha).getFullYear());
+      return xmes === mes && xanio === anio;
+    });
+    
+    var filtered_gastos = (CACHE.gastos || []).filter(function(x) {
+      var xmes = String(new Date(x.fecha).getMonth()+1).padStart(2,'0');
+      var xanio = String(new Date(x.fecha).getFullYear());
+      return xmes === mes && xanio === anio;
+    });
+  }
+  
+  // Actualizar métricas
+  var totalIngresos = filtered_ingresos.reduce(function(s,x){return s+(parseFloat(x.monto)||0);},0);
+  var totalGastos = filtered_gastos.reduce(function(s,x){return s+(parseFloat(x.monto)||0);},0);
+  
+  document.getElementById('metric-ingresos').textContent = '$' + fmt(totalIngresos);
+  document.getElementById('metric-gastos').textContent = '$' + fmt(totalGastos);
+  document.getElementById('metric-revenue').textContent = '$' + fmt(totalIngresos - totalGastos);
+  
+  var roas = totalIngresos / Math.max(totalGastos, 1);
+  document.getElementById('metric-roas').textContent = roas.toFixed(2) + 'x';
+  
+  // Renderizar gráficos
+  renderChartTimeline();
+}
+
 </script>
 </body>
 </html>
