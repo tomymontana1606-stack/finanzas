@@ -946,12 +946,12 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
               <div style="font-size:11px;color:var(--muted)" id="timeline-range-label">Últimos 6 meses</div>
             </div>
             <div style="display:flex;gap:8px;align-items:center">
-              <button onclick="changeChartPeriod('7')" class="chart-period-btn" data-period="7" style="padding:6px 12px;background:rgba(37,99,235,0.2);border:1px solid #2563EB;color:#2563EB;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;transition:all 0.2s">7 días</button>
-<button onclick="changeChartPeriod('15')" class="chart-period-btn" data-period="15" style="padding:6px 12px;background:rgba(37,99,235,0.2);border:1px solid #2563EB;color:#2563EB;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;transition:all 0.2s">15 días</button>
-<button onclick="changeChartPeriod('30')" class="chart-period-btn" data-period="30" style="padding:6px 12px;background:rgba(37,99,235,0.2);border:1px solid #2563EB;color:#2563EB;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;transition:all 0.2s">30 días</button>
-<button onclick="changeChartPeriod('60')" class="chart-period-btn" data-period="60" style="padding:6px 12px;background:rgba(37,99,235,0.2);border:1px solid #2563EB;color:#2563EB;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;transition:all 0.2s">60 días</button>
-<button onclick="changeChartPeriod('90')" class="chart-period-btn" data-period="90" style="padding:6px 12px;background:rgba(37,99,235,0.2);border:1px solid #2563EB;color:#2563EB;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;transition:all 0.2s">90 días</button>
-<button onclick="changeChartPeriod('all')" class="chart-period-btn active" data-period="all" style="padding:6px 12px;background:#2563EB;border:1px solid #2563EB;color:#fff;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;transition:all 0.2s">Total</button>
+              
+
+
+
+
+
               <button class="filter-btn" data-range="all">Todo</button>
               <button class="filter-btn" id="custom-date-btn" data-range="custom">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="margin-right: 4px;">
@@ -5030,13 +5030,7 @@ function initMonthSelector() {
 }
 
 
-function changeChartPeriod(days) {
-  // Actualizar botones del gráfico
-  document.querySelectorAll('.chart-period-btn').forEach(function(btn) {
-    if(btn.dataset.period === String(days)) {
-      btn.style.background = '#2563EB';
-      btn.style.color = '#fff';
-    } else {
+ else {
       btn.style.background = 'rgba(37,99,235,0.2)';
       btn.style.color = '#2563EB';
     }
