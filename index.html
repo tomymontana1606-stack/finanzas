@@ -939,33 +939,8 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
         </div>
       </div>
       <div class="charts-row" style="grid-template-columns:1fr">
-        <div class="chart-card" style="padding:22px 24px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-            <div>
-              <div class="chart-title" style="margin-bottom:2px">Ingresos vs Gastos</div>
-              <div style="font-size:11px;color:var(--muted)" id="timeline-range-label">Últimos 6 meses</div>
-            </div>
-            <div style="display:flex;gap:8px;align-items:center">
-              <button class="filter-btn active" data-range="6m">6M</button>
-              <button class="filter-btn" data-range="1y">1Y</button>
-              <button class="filter-btn" data-range="2y">2Y</button>
-              <button class="filter-btn" data-range="all">Todo</button>
-              <button class="filter-btn" id="custom-date-btn" data-range="custom">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="margin-right: 4px;">
-                  <path fill-rule="evenodd" clip-rule="evenodd" d="M5.5 0.5V1.25V2H10.5V1.25V0.5H12V1.25V2H14H15.5V3.5V13.5C15.5 14.8807 14.3807 16 13 16H3C1.61929 16 0.5 14.8807 0.5 13.5V3.5V2H2H4V1.25V0.5H5.5ZM2 3.5H14V6H2V3.5ZM2 7.5V13.5C2 14.0523 2.44772 14.5 3 14.5H13C13.5523 14.5 14 14.0523 14 13.5V7.5H2Z"/>
-                </svg>
-                Personalizado
-              </button>
-            </div>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-            <div style="display:flex;gap:16px">
-              <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,0.5)"><span style="width:24px;height:2px;background:#00E5FF;display:inline-block;border-radius:2px"></span>Ingresos</span>
-              <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,0.5)"><span style="width:24px;height:2px;background:#FF4560;display:inline-block;border-radius:2px"></span>Gastos</span>
-              <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,0.5)"><span style="width:24px;height:2px;background:#00E396;display:inline-block;border-radius:2px"></span>Revenue</span>
-            </div>
-          </div>
-          <div id="chart-timeline-container" style="position:relative;height:260px" role="img" aria-label="Línea de tiempo ingresos vs gastos"></div>
+        <div class="chart-card" style="padding:24px">
+          <div id="chart-timeline-container" style="min-height:300px"></div>
         </div>
       </div>
 
@@ -2262,7 +2237,7 @@ function renderDashboardFromCache() {
 
   renderChartGastos(porCat, { totalIngresos, totalGastos, gastoAds, roas, periodo: mes ? `${mes} ${anio}` : 'Todos los períodos' });
   renderChartDonut();
-  
+  renderChartTimeline();
   renderAlertas();
 }
 
@@ -4825,9 +4800,8 @@ function renderChartTimeline() {
   var now = new Date();
   var m = now.getMonth(), y = now.getFullYear();
   var pm = m === 0 ? 11 : m - 1, py = m === 0 ? y - 1 : y;
-  
   var months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  
+
   var i1 = {}, i2 = {};
   (CACHE.ingresos || []).forEach(function(x) {
     var d = new Date(x.fecha);
@@ -4840,7 +4814,7 @@ function renderChartTimeline() {
       i2[day] = (i2[day] || 0) + parseFloat(x.monto || 0);
     }
   });
-  
+
   var a1 = 0, a2 = 0, d1 = [], d2 = [];
   for(var i = 1; i <= 31; i++) {
     a1 += i1[i] || 0;
@@ -4848,63 +4822,84 @@ function renderChartTimeline() {
     d1.push(a1);
     d2.push(a2);
   }
-  
-  var t1 = a1, t2 = a2, p = t2 > 0 ? ((t1 - t2) / t2 * 100) : 0;
-  
-  var html = '<div style="padding:16px">';
-  html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid rgba(255,255,255,0.1)">';
-  html += '<div><div style="font-size:11px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:1px">DASHBOARD FINANCIERO</div>';
-  html += '<div style="font-size:18px;font-weight:bold;color:white;margin-top:6px">Cash Collected · ' + months[m] + ' 2026</div>';
-  html += '<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:6px">Acumulado</div></div>';
-  html += '<div style="text-align:right"><div style="font-size:28px;color:#00E396;font-weight:bold">' + fmt(t1) + '</div>';
-  html += '<div style="font-size:10px;color:rgba(255,255,255,0.5);text-transform:uppercase;margin-top:8px">TOTAL ACUMULADO</div></div></div>';
-  
-  html += '<div style="display:flex;justify-content:space-between;margin-bottom:20px;font-size:12px">';
-  html += '<div style="color:' + (p >= 0 ? '#00E396' : '#FF4560') + '">↑ ' + p.toFixed(1) + '% vs Mes Anterior</div>';
-  html += '<div style="color:rgba(255,255,255,0.4)">Mes anterior: ' + fmt(t2) + '</div></div>';
-  
-  var w = 1000, ht = 300, ml = 60, mr = 40, mt = 30, mb = 50;
-  var iw = w - ml - mr, ih = ht - mt - mb;
-  var max = Math.max(t1, t2) * 1.05 || 1000;
-  var sy = ih / max, sx = iw / 30;
-  
-  html += '<svg width="100%" height="' + ht + '" viewBox="0 0 ' + w + ' ' + ht + '" preserveAspectRatio="xMidYMid meet">';
-  
-  var p2 = "M " + ml + " " + (mt + ih);
-  for(var i = 0; i < 31; i++) {
-    var x = ml + i * sx;
-    var y = mt + ih - (d2[i] || 0) * sy;
-    p2 += " L " + x + " " + y;
-  }
-  html += '<path d="' + p2 + '" stroke="rgba(255,255,255,0.2)" stroke-width="2" fill="none" stroke-dasharray="5,5"/>';
-  
-  var p1 = "M " + ml + " " + (mt + ih);
-  for(var i = 0; i < 31; i++) {
-    var x = ml + i * sx;
-    var y = mt + ih - (d1[i] || 0) * sy;
-    p1 += " L " + x + " " + y;
-  }
-  html += '<path d="' + p1 + '" stroke="#00E396" stroke-width="3" fill="none"/>';
-  
-  var area = p1 + " L " + (ml + 30*sx) + " " + (mt + ih) + " L " + ml + " " + (mt + ih) + " Z";
-  html += '<path d="' + area + '" fill="rgba(0,227,150,0.15)"/>';
-  
-  html += '<line x1="' + ml + '" y1="' + (mt + ih) + '" x2="' + w + '" y2="' + (mt + ih) + '" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>';
-  
-  for(var i = 0; i <= 30; i += 5) {
-    var x = ml + i * sx;
-    html += '<text x="' + x + '" y="' + (mt + ih + 25) + '" fill="rgba(255,255,255,0.4)" font-size="10" text-anchor="middle">' + (i+1) + '</text>';
-  }
-  
-  html += '<g><line x1="' + (ml + 20) + '" y1="15" x2="' + (ml + 32) + '" y2="15" stroke="#00E396" stroke-width="2"/>';
-  html += '<text x="' + (ml + 40) + '" y="19" fill="rgba(255,255,255,0.7)" font-size="11">Mes Actual</text>';
-  html += '<line x1="' + (ml + 180) + '" y1="15" x2="' + (ml + 192) + '" y2="15" stroke="rgba(255,255,255,0.2)" stroke-width="2" stroke-dasharray="5,5"/>';
-  html += '<text x="' + (ml + 200) + '" y="19" fill="rgba(255,255,255,0.7)" font-size="11">Mes Anterior</text></g>';
-  
-  html += '</svg></div>';
-  c.innerHTML = html;
-}
 
-document.addEventListener("DOMContentLoaded", function() { renderChartTimeline(); });</script>
+  var t1 = a1, t2 = a2, p = t2 > 0 ? ((t1 - t2) / t2 * 100) : 0;
+  var color = p >= 0 ? '#00E396' : '#FF4560';
+
+  var out = '<div style="padding:8px">';
+  out += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,0.08)">';
+  out += '<div>';
+  out += '<div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">DASHBOARD FINANCIERO</div>';
+  out += '<div style="font-size:20px;font-weight:700;color:#fff">Cash Collected · ' + months[m] + ' 2026</div>';
+  out += '<div style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:4px">Acumulado</div>';
+  out += '</div>';
+  out += '<div style="text-align:right">';
+  out += '<div style="font-size:30px;font-weight:700;color:#00E396;line-height:1">' + fmt(t1) + '</div>';
+  out += '<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:6px;text-transform:uppercase;letter-spacing:0.5px">Total Acumulado</div>';
+  out += '</div>';
+  out += '</div>';
+
+  out += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;font-size:12px">';
+  out += '<div style="color:' + color + ';font-weight:600">↑ ' + p.toFixed(1) + '% vs Mes Anterior</div>';
+  out += '<div style="color:rgba(255,255,255,0.35)">Mes anterior hoy · ' + fmt(t2) + '</div>';
+  out += '</div>';
+
+  var W = 900, H = 280, ML = 50, MR = 20, MT = 30, MB = 45;
+  var IW = W-ML-MR, IH = H-MT-MB;
+  var MAX = Math.max(t1, t2) * 1.08 || 1000;
+  var SY = IH / MAX, SX = IW / 30;
+
+  out += '<svg width="100%" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet">';
+
+  // Grid horizontal
+  for(var g = 0; g <= 4; g++) {
+    var gy = MT + IH - (g / 4) * IH;
+    out += '<line x1="' + ML + '" y1="' + gy + '" x2="' + (W-MR) + '" y2="' + gy + '" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>';
+    var gv = (MAX * g / 4);
+    var glabel = gv >= 1000 ? '$' + (gv/1000).toFixed(0) + 'k' : '$' + gv.toFixed(0);
+    out += '<text x="' + (ML-8) + '" y="' + (gy+4) + '" fill="rgba(255,255,255,0.3)" font-size="9" text-anchor="end">' + glabel + '</text>';
+  }
+
+  // Línea mes anterior (punteada)
+  var path2 = 'M';
+  for(var i = 0; i < 31; i++) {
+    var x = ML + i * SX;
+    var y = MT + IH - (d2[i] || 0) * SY;
+    path2 += (i === 0 ? ' ' : ' L ') + x + ' ' + y;
+  }
+  out += '<path d="' + path2 + '" stroke="rgba(255,255,255,0.18)" stroke-width="1.5" fill="none" stroke-dasharray="4,4"/>';
+
+  // Área mes actual
+  var path1 = 'M';
+  for(var i = 0; i < 31; i++) {
+    var x = ML + i * SX;
+    var y = MT + IH - (d1[i] || 0) * SY;
+    path1 += (i === 0 ? ' ' : ' L ') + x + ' ' + y;
+  }
+  var areaPath = path1 + ' L ' + (ML + 30*SX) + ' ' + (MT+IH) + ' L ' + ML + ' ' + (MT+IH) + ' Z';
+  out += '<defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#00E396" stop-opacity="0.3"/><stop offset="100%" stop-color="#00E396" stop-opacity="0.02"/></linearGradient></defs>';
+  out += '<path d="' + areaPath + '" fill="url(#g1)"/>';
+  out += '<path d="' + path1 + '" stroke="#00E396" stroke-width="2.5" fill="none" stroke-linecap="round"/>';
+
+  // Eje X
+  out += '<line x1="' + ML + '" y1="' + (MT+IH) + '" x2="' + (W-MR) + '" y2="' + (MT+IH) + '" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>';
+  for(var i = 0; i <= 30; i += 5) {
+    var x = ML + i * SX;
+    out += '<text x="' + x + '" y="' + (MT+IH+20) + '" fill="rgba(255,255,255,0.35)" font-size="10" text-anchor="middle">' + String(i+1).padStart(2,'0') + '</text>';
+  }
+
+  // Leyenda
+  out += '<g transform="translate(' + ML + ',' + (MT-12) + ')">';
+  out += '<line x1="0" y1="0" x2="14" y2="0" stroke="#00E396" stroke-width="2.5"/>';
+  out += '<text x="20" y="4" fill="rgba(255,255,255,0.6)" font-size="10">Mes Actual</text>';
+  out += '<line x1="140" y1="0" x2="154" y2="0" stroke="rgba(255,255,255,0.18)" stroke-width="1.5" stroke-dasharray="4,4"/>';
+  out += '<text x="160" y="4" fill="rgba(255,255,255,0.6)" font-size="10">Mes Anterior</text>';
+  out += '</g>';
+
+  out += '</svg>';
+  out += '</div>';
+  c.innerHTML = out;
+}
+</script>
 </body>
 </html>
