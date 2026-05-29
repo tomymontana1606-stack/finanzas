@@ -793,8 +793,8 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
 </style>
 <style>
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-.spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 8px; }
-.toast { position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.9); color: #fff; padding: 12px 16px; border-radius: 6px; font-size: 12px; z-index: 9999; display: flex; align-items: center; gap: 8px; }
+.spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 8px; }
+.loading-toast { position: fixed; bottom: 24px; right: 24px; background: rgba(0,0,0,0.85); color: white; padding: 12px 16px; border-radius: 6px; font-size: 12px; z-index: 9999; display: flex; align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,0.1); }
 </style></head>
 <body>
 
@@ -951,15 +951,10 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
             </div>
             <div style="display:flex;gap:8px;align-items:center">
               <button class="filter-btn active" data-range="6m">6M</button>
-              <button class="filter-btn" data-range="1y">1Y</button>
-              <button class="filter-btn" data-range="2y">2Y</button>
-              <button class="filter-btn" data-range="all">Todo</button>
-              <button class="filter-btn" id="custom-date-btn" data-range="custom">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="margin-right: 4px;">
-                  <path fill-rule="evenodd" clip-rule="evenodd" d="M5.5 0.5V1.25V2H10.5V1.25V0.5H12V1.25V2H14H15.5V3.5V13.5C15.5 14.8807 14.3807 16 13 16H3C1.61929 16 0.5 14.8807 0.5 13.5V3.5V2H2H4V1.25V0.5H5.5ZM2 3.5H14V6H2V3.5ZM2 7.5V13.5C2 14.0523 2.44772 14.5 3 14.5H13C13.5523 14.5 14 14.0523 14 13.5V7.5H2Z"/>
-                </svg>
-                Personalizado
-              </button>
+              
+              
+              
+              
             </div>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
@@ -2374,99 +2369,214 @@ function renderAlertas() {
 // Global variable for timeline range
 let TIMELINE_MONTHS = 6;
 
-function renderChartTimeline() {
-  var container = document.getElementById('chart-timeline-container');
-  if(!container) return;
+function renderChartTimeline(months = TIMELINE_MONTHS) {
+  const container = document.getElementById('chart-timeline-container');
+  if (!container) return;
+
+  const MESES_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const now = new Date();
   
-  var now = new Date();
-  var mes = now.getMonth();
-  var anio = now.getFullYear();
-  var mes_ant = mes === 0 ? 11 : mes - 1;
-  var anio_ant = mes === 0 ? anio - 1 : anio;
+  // Build months array based on filter
+  const meses = [];
+  const totalMonths = months === 'all' ? 24 : months; // 'all' shows 2 years max
   
-  var meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  var mes_nombre = meses[mes];
-  
-  var ing_act = {}, ing_ant = {};
-  (CACHE.ingresos || []).forEach(function(x) {
-    var d = new Date(x.fecha);
-    if(d.getMonth() === mes && d.getFullYear() === anio) {
-      var day = d.getDate();
-      ing_act[day] = (ing_act[day] || 0) + parseFloat(x.monto || 0);
+  for (let i = totalMonths - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    meses.push({ 
+      label: MESES_ES[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2), 
+      mes: MESES_ES[d.getMonth()], 
+      anio: d.getFullYear() 
+    });
+  }
+
+  const ingData = meses.map(m => CACHE.ingresos.filter(r => r.mes === m.mes && r.anio === m.anio).reduce((s,r)=>s+r.monto,0));
+  const gasData = meses.map(m => CACHE.gastos.filter(r => r.mes === m.mes && r.anio === m.anio).reduce((s,r)=>s+r.monto,0));
+  const revData = ingData.map((v,i) => Math.max(0, v - gasData[i]));
+  const labels = meses.map(m => m.label);
+
+  const maxValue = Math.max(...ingData, ...gasData, ...revData, 1000);
+  const width = container.clientWidth || 800;
+  const height = 260;
+  const margin = { top: 20, right: 20, bottom: 40, left: 60 };
+  const innerWidth = width - margin.left - margin.right;
+  const innerHeight = height - margin.top - margin.bottom;
+
+  // Generate smooth path
+  const generatePath = (data, close = false) => {
+    if (data.length === 0) return '';
+    
+    const points = data.map((value, i) => {
+      const x = (i / (data.length - 1)) * innerWidth;
+      const y = innerHeight - (value / maxValue) * innerHeight;
+      return { x, y };
+    });
+
+    let path = `M ${points[0].x} ${points[0].y}`;
+    
+    for (let i = 0; i < points.length - 1; i++) {
+      const x1 = points[i].x;
+      const y1 = points[i].y;
+      const x2 = points[i + 1].x;
+      const y2 = points[i + 1].y;
+      const midX = (x1 + x2) / 2;
+      path += ` C ${midX},${y1} ${midX},${y2} ${x2},${y2}`;
     }
-    if(d.getMonth() === mes_ant && d.getFullYear() === anio_ant) {
-      var day = d.getDate();
-      ing_ant[day] = (ing_ant[day] || 0) + parseFloat(x.monto || 0);
+    
+    if (close) {
+      path += ` L ${innerWidth} ${innerHeight} L 0 ${innerHeight} Z`;
     }
+    
+    return path;
+  };
+
+  const ingPath = generatePath(ingData, false);
+  const ingAreaPath = generatePath(ingData, true);
+  const gasPath = generatePath(gasData, false);
+  const gasAreaPath = generatePath(gasData, true);
+  const revPath = generatePath(revData, false);
+  const revAreaPath = generatePath(revData, true);
+
+  // Y-axis ticks
+  const yTicks = 5;
+  const yStep = maxValue / (yTicks - 1);
+  let yTicksHTML = '';
+  for (let i = 0; i < yTicks; i++) {
+    const value = yStep * i;
+    const y = innerHeight - (value / maxValue) * innerHeight;
+    const label = value >= 1000 ? `$${(value / 1000).toFixed(0)}k` : `$${value.toFixed(0)}`;
+    yTicksHTML += `
+      <line x1="0" y1="${y}" x2="${innerWidth}" y2="${y}" stroke="rgba(255,255,255,0.05)" stroke-width="1" stroke-dasharray="4,4"/>
+      <text x="-10" y="${y}" text-anchor="end" dominant-baseline="middle" fill="var(--muted)" font-size="11" class="chart-label">${label}</text>
+    `;
+  }
+
+  // X-axis labels
+  let xLabelsHTML = '';
+  labels.forEach((label, i) => {
+    const x = (i / (labels.length - 1)) * innerWidth;
+    xLabelsHTML += `<text x="${x}" y="${innerHeight + 25}" text-anchor="middle" fill="var(--muted)" font-size="11" class="chart-label">${label}</text>`;
   });
-  
-  var acum_act = 0, acum_ant = 0;
-  var arr_act = [], arr_ant = [];
-  for(var i = 1; i <= 31; i++) {
-    acum_act += ing_act[i] || 0;
-    acum_ant += ing_ant[i] || 0;
-    arr_act.push(acum_act);
-    arr_ant.push(acum_ant);
-  }
-  
-  var total_act = acum_act;
-  var total_ant = acum_ant;
-  var pct = total_ant > 0 ? ((total_act - total_ant) / total_ant * 100) : 0;
-  
-  var html = '<div style="padding:16px">';
-  html += '<div style="display:flex;justify-content:space-between;margin-bottom:20px">';
-  html += '<div><div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:4px">CASH COLLECTED</div>';
-  html += '<div style="font-size:18px;font-weight:bold;color:#fff">' + mes_nombre + ' 2026</div>';
-  html += '<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:4px">Acumulado</div></div>';
-  html += '<div style="text-align:right"><div style="font-size:24px;color:#00E396;font-weight:bold">$' + fmt(total_act) + '</div>';
-  html += '<div style="font-size:10px;color:rgba(255,255,255,0.5);margin-top:4px">TOTAL ACUMULADO</div></div></div>';
-  
-  html += '<div style="display:flex;justify-content:space-between;margin-bottom:16px;font-size:12px">';
-  html += '<div style="color:' + (pct >= 0 ? '#00E396' : '#FF4560') + '">↑ ' + pct.toFixed(1) + '% vs Mes Anterior</div>';
-  html += '<div style="color:rgba(255,255,255,0.4)">Mes anterior: $' + fmt(total_ant) + '</div></div>';
-  
-  var w = 800, h = 280, ml = 50, mr = 20, mt = 20, mb = 40;
-  var iw = w - ml - mr, ih = h - mt - mb;
-  var maxv = Math.max(total_act, total_ant) * 1.05 || 1000;
-  var sy = ih / maxv, sx = iw / 30;
-  
-  html += '<svg width="100%" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="xMidYMid meet" style="background:transparent">';
-  
-  var path_ant = "M " + ml + " " + (mt + ih);
-  for(var i = 0; i < 31; i++) {
-    var x = ml + i * sx;
-    var y = mt + ih - (arr_ant[i] || 0) * sy;
-    path_ant += " L " + x + " " + y;
-  }
-  html += '<path d="' + path_ant + '" stroke="rgba(255,255,255,0.15)" stroke-width="2" fill="none" stroke-dasharray="4,4"/>';
-  
-  var path_act = "M " + ml + " " + (mt + ih);
-  for(var i = 0; i < 31; i++) {
-    var x = ml + i * sx;
-    var y = mt + ih - (arr_act[i] || 0) * sy;
-    path_act += " L " + x + " " + y;
-  }
-  html += '<path d="' + path_act + '" stroke="#00E396" stroke-width="3" fill="none"/>';
-  
-  var area = path_act + " L " + (ml + 30*sx) + " " + (mt + ih) + " L " + ml + " " + (mt + ih) + " Z";
-  html += '<path d="' + area + '" fill="rgba(0,227,150,0.12)"/>';
-  
-  html += '<line x1="' + ml + '" y1="' + (mt + ih) + '" x2="' + (w - mr) + '" y2="' + (mt + ih) + '" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>';
-  
-  for(var i = 0; i <= 30; i += 5) {
-    var x = ml + i * sx;
-    html += '<text x="' + x + '" y="' + (mt + ih + 25) + '" fill="rgba(255,255,255,0.4)" font-size="10" text-anchor="middle">' + (i+1) + '</text>';
-  }
-  
-  html += '<line x1="' + ml + '" y1="' + mt + '" x2="' + ml + '" y2="' + (mt + ih) + '" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>';
-  html += '<g><line x1="' + ml + '" y1="' + mt + '" x2="10" y2="' + mt + '" stroke="#00E396" stroke-width="2"/>';
-  html += '<text x="' + (ml + 18) + '" y="' + (mt + 4) + '" fill="rgba(255,255,255,0.6)" font-size="11">Mes Actual</text>';
-  html += '<line x1="' + (ml + 140) + '" y1="' + mt + '" x2="' + (ml + 152) + '" y2="' + mt + '" stroke="rgba(255,255,255,0.15)" stroke-width="2" stroke-dasharray="4,4"/>';
-  html += '<text x="' + (ml + 160) + '" y="' + (mt + 4) + '" fill="rgba(255,255,255,0.6)" font-size="11">Mes Anterior</text></g>';
-  
-  html += '</svg></div>';
-  
-  container.innerHTML = html;
+
+  // Interactive dots for each data point
+  let dotsHTML = '';
+  labels.forEach((label, i) => {
+    const x = (i / (labels.length - 1)) * innerWidth;
+    const ingY = innerHeight - (ingData[i] / maxValue) * innerHeight;
+    const gasY = innerHeight - (gasData[i] / maxValue) * innerHeight;
+    const revY = innerHeight - (revData[i] / maxValue) * innerHeight;
+    
+    dotsHTML += `
+      <g class="chart-point-group" data-index="${i}">
+        <circle cx="${x}" cy="${ingY}" r="4" fill="#00E5FF" stroke="var(--bg)" stroke-width="2" opacity="0" class="hover-dot"/>
+        <circle cx="${x}" cy="${gasY}" r="4" fill="#FF4560" stroke="var(--bg)" stroke-width="2" opacity="0" class="hover-dot"/>
+        <circle cx="${x}" cy="${revY}" r="4" fill="#00E396" stroke="var(--bg)" stroke-width="2" opacity="0" class="hover-dot"/>
+        <rect x="${x - 15}" y="0" width="30" height="${innerHeight}" fill="transparent" class="hover-zone" 
+          data-ing="${ingData[i]}" data-gas="${gasData[i]}" data-rev="${revData[i]}" data-label="${label}"/>
+      </g>
+    `;
+  });
+
+  container.innerHTML = `
+    <svg viewBox="0 0 ${width} ${height}" class="area-chart" style="width: 100%; height: 260px;" id="timeline-svg">
+      <defs>
+        <linearGradient id="gradient-ing" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#00E5FF" stop-opacity="0.3"/>
+          <stop offset="100%" stop-color="#00E5FF" stop-opacity="0"/>
+        </linearGradient>
+        <linearGradient id="gradient-gas" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#FF4560" stop-opacity="0.3"/>
+          <stop offset="100%" stop-color="#FF4560" stop-opacity="0"/>
+        </linearGradient>
+        <linearGradient id="gradient-rev" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#00E396" stop-opacity="0.3"/>
+          <stop offset="100%" stop-color="#00E396" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      
+      <g transform="translate(${margin.left}, ${margin.top})">
+        ${yTicksHTML}
+        
+        <!-- Revenue area -->
+        <path d="${revAreaPath}" fill="url(#gradient-rev)" class="area-fill" style="animation: fadeIn 0.8s ease"/>
+        <path d="${revPath}" fill="none" stroke="#00E396" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="area-line" style="animation: drawLine 1.2s ease"/>
+        
+        <!-- Gastos area -->
+        <path d="${gasAreaPath}" fill="url(#gradient-gas)" class="area-fill" style="animation: fadeIn 0.8s ease 0.1s both"/>
+        <path d="${gasPath}" fill="none" stroke="#FF4560" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="area-line" style="animation: drawLine 1.2s ease 0.1s both"/>
+        
+        <!-- Ingresos area -->
+        <path d="${ingAreaPath}" fill="url(#gradient-ing)" class="area-fill" style="animation: fadeIn 0.8s ease 0.2s both"/>
+        <path d="${ingPath}" fill="none" stroke="#00E5FF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="area-line" style="animation: drawLine 1.2s ease 0.2s both"/>
+        
+        ${dotsHTML}
+        ${xLabelsHTML}
+      </g>
+    </svg>
+    
+    <div id="chart-tooltip" style="
+      position: absolute;
+      background: rgba(10,10,10,0.95);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 10px 12px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      font-size: 12px;
+      z-index: 1000;
+    "></div>
+  `;
+
+  // Add interactivity
+  const svg = container.querySelector('svg');
+  const tooltip = container.querySelector('#chart-tooltip');
+  const hoverZones = container.querySelectorAll('.hover-zone');
+
+  hoverZones.forEach(zone => {
+    zone.addEventListener('mouseenter', (e) => {
+      const ing = e.target.dataset.ing;
+      const gas = e.target.dataset.gas;
+      const rev = e.target.dataset.rev;
+      const label = e.target.dataset.label;
+      
+      // Show dots
+      const group = e.target.closest('.chart-point-group');
+      group.querySelectorAll('.hover-dot').forEach(dot => dot.style.opacity = '1');
+      
+      // Show tooltip
+      tooltip.innerHTML = `
+        <div style="font-weight: 600; margin-bottom: 6px; color: rgba(255,255,255,0.9)">${label}</div>
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+          <span style="width: 8px; height: 8px; background: #00E5FF; border-radius: 2px;"></span>
+          <span style="color: rgba(255,255,255,0.7)">Ingresos:</span>
+          <span style="margin-left: auto; font-weight: 600; color: #00E5FF">${fmt(ing)}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+          <span style="width: 8px; height: 8px; background: #FF4560; border-radius: 2px;"></span>
+          <span style="color: rgba(255,255,255,0.7)">Gastos:</span>
+          <span style="margin-left: auto; font-weight: 600; color: #FF4560">${fmt(gas)}</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="width: 8px; height: 8px; background: #00E396; border-radius: 2px;"></span>
+          <span style="color: rgba(255,255,255,0.7)">Revenue:</span>
+          <span style="margin-left: auto; font-weight: 600; color: #00E396">${fmt(rev)}</span>
+        </div>
+      `;
+      tooltip.style.opacity = '1';
+    });
+
+    zone.addEventListener('mousemove', (e) => {
+      const rect = container.getBoundingClientRect();
+      tooltip.style.left = (e.clientX - rect.left + 15) + 'px';
+      tooltip.style.top = (e.clientY - rect.top - 60) + 'px';
+    });
+
+    zone.addEventListener('mouseleave', (e) => {
+      const group = e.target.closest('.chart-point-group');
+      group.querySelectorAll('.hover-dot').forEach(dot => dot.style.opacity = '0');
+      tooltip.style.opacity = '0';
+    });
+  });
 }
 
 function renderChartGastos(porCat, meta = {}) {
@@ -4915,29 +5025,127 @@ function initMonthSelector() {
   });
 }
 
-function showLoadingToast(msg) {
+function renderChartTimeline() {
+  var c = document.getElementById('chart-timeline-container');
+  if(!c) return;
+  
+  var now = new Date();
+  var m = now.getMonth(), y = now.getFullYear();
+  var pm = m === 0 ? 11 : m - 1, py = m === 0 ? y - 1 : y;
+  
+  var months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  
+  var i1 = {}, i2 = {};
+  (CACHE.ingresos || []).forEach(function(x) {
+    var d = new Date(x.fecha);
+    if(d.getMonth() === m && d.getFullYear() === y) {
+      var day = d.getDate();
+      i1[day] = (i1[day] || 0) + parseFloat(x.monto || 0);
+    }
+    if(d.getMonth() === pm && d.getFullYear() === py) {
+      var day = d.getDate();
+      i2[day] = (i2[day] || 0) + parseFloat(x.monto || 0);
+    }
+  });
+  
+  var a1 = 0, a2 = 0, d1 = [], d2 = [];
+  for(var i = 1; i <= 31; i++) {
+    a1 += i1[i] || 0;
+    a2 += i2[i] || 0;
+    d1.push(a1);
+    d2.push(a2);
+  }
+  
+  var t1 = a1, t2 = a2, p = t2 > 0 ? ((t1 - t2) / t2 * 100) : 0;
+  
+  var h = '<div style="padding:16px">';
+  h += '<div style="display:flex;justify-content:space-between;margin-bottom:20px">';
+  h += '<div><div style="font-size:11px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.5px">Cash Collected</div>';
+  h += '<div style="font-size:18px;font-weight:bold;color:white;margin-top:4px">' + months[m] + ' 2026</div>';
+  h += '<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:4px">Acumulado</div></div>';
+  h += '<div style="text-align:right"><div style="font-size:24px;color:#00E396;font-weight:bold">$' + fmt(t1) + '</div>';
+  h += '<div style="font-size:10px;color:rgba(255,255,255,0.5);text-transform:uppercase;margin-top:4px">Total Acumulado</div></div></div>';
+  
+  h += '<div style="display:flex;justify-content:space-between;margin-bottom:16px;font-size:12px">';
+  h += '<div style="color:' + (p >= 0 ? '#00E396' : '#FF4560') + '">↑ ' + p.toFixed(1) + '% vs Mes Anterior</div>';
+  h += '<div style="color:rgba(255,255,255,0.4)">Mes anterior: $' + fmt(t2) + '</div></div>';
+  
+  var w = 800, ht = 280, ml = 50, mr = 20, mt = 20, mb = 40;
+  var iw = w - ml - mr, ih = ht - mt - mb;
+  var max = Math.max(t1, t2) * 1.05 || 1000;
+  var sy = ih / max, sx = iw / 30;
+  
+  h += '<svg width="100%" height="' + ht + '" viewBox="0 0 ' + w + ' ' + ht + '" preserveAspectRatio="xMidYMid meet">';
+  
+  var p2 = "M " + ml + " " + (mt + ih);
+  for(var i = 0; i < 31; i++) {
+    var x = ml + i * sx, y = mt + ih - (d2[i] || 0) * sy;
+    p2 += " L " + x + " " + y;
+  }
+  h += '<path d="' + p2 + '" stroke="rgba(255,255,255,0.15)" stroke-width="2" fill="none" stroke-dasharray="4,4"/>';
+  
+  var p1 = "M " + ml + " " + (mt + ih);
+  for(var i = 0; i < 31; i++) {
+    var x = ml + i * sx, y = mt + ih - (d1[i] || 0) * sy;
+    p1 += " L " + x + " " + y;
+  }
+  h += '<path d="' + p1 + '" stroke="#00E396" stroke-width="3" fill="none"/>';
+  
+  var area = p1 + " L " + (ml + 30*sx) + " " + (mt + ih) + " L " + ml + " " + (mt + ih) + " Z";
+  h += '<path d="' + area + '" fill="rgba(0,227,150,0.12)"/>';
+  
+  h += '<line x1="' + ml + '" y1="' + (mt + ih) + '" x2="' + (w - mr) + '" y2="' + (mt + ih) + '" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>';
+  
+  for(var i = 0; i <= 30; i += 5) {
+    var x = ml + i * sx;
+    h += '<text x="' + x + '" y="' + (mt + ih + 25) + '" fill="rgba(255,255,255,0.4)" font-size="10" text-anchor="middle">' + (i+1) + '</text>';
+  }
+  
+  h += '<g><line x1="' + (ml + 12) + '" y1="12" x2="' + (ml + 24) + '" y2="12" stroke="#00E396" stroke-width="2"/>';
+  h += '<text x="' + (ml + 32) + '" y="16" fill="rgba(255,255,255,0.6)" font-size="11">Mes Actual</text>';
+  h += '<line x1="' + (ml + 155) + '" y1="12" x2="' + (ml + 167) + '" y2="12" stroke="rgba(255,255,255,0.15)" stroke-width="2" stroke-dasharray="4,4"/>';
+  h += '<text x="' + (ml + 175) + '" y="16" fill="rgba(255,255,255,0.6)" font-size="11">Mes Anterior</text></g>';
+  
+  h += '</svg></div>';
+  c.innerHTML = h;
+}
+
+function showLoadingToast() {
   var t = document.getElementById('loading-toast');
   if(t) t.remove();
   t = document.createElement('div');
   t.id = 'loading-toast';
-  t.className = 'toast';
-  t.innerHTML = '<div class="spinner"></div>' + (msg || 'Guardando...');
+  t.className = 'loading-toast';
+  t.innerHTML = '<div class="spinner"></div>Guardando...';
   document.body.appendChild(t);
 }
+
 function hideLoadingToast() {
   var t = document.getElementById('loading-toast');
   if(t) setTimeout(function() { t.remove(); }, 300);
 }
+
 if(typeof window.api === 'function') {
-  var _api = window.api;
-  window.api = function(d) {
+  var _api_orig = window.api;
+  window.api = function(data) {
     showLoadingToast();
     try {
-      var r = _api(d);
-      if(r && r.then) return r.then(function(x) { hideLoadingToast(); return x; }).catch(function(e) { hideLoadingToast(); throw e; });
+      var result = _api_orig(data);
+      if(result && typeof result.then === 'function') {
+        return result.then(function(res) {
+          hideLoadingToast();
+          return res;
+        }).catch(function(err) {
+          hideLoadingToast();
+          throw err;
+        });
+      }
       hideLoadingToast();
-      return r;
-    } catch(e) { hideLoadingToast(); throw e; }
+      return result;
+    } catch(e) {
+      hideLoadingToast();
+      throw e;
+    }
   };
 }
 </script>
