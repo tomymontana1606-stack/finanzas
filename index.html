@@ -990,7 +990,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
             <div>
               <div class="chart-title" style="margin-bottom:2px">Ingresos vs Gastos</div>
-              <div style="font-size:11px;color:var(--muted)" id="timeline-range-label">Últimos 6 meses</div>
+              <div style="font-size:11px;color:var(--muted)" id="timeline-range-label">Mayo 2026</div>
             </div>
             <div style="display:flex;gap:8px;align-items:center">
               
@@ -2412,214 +2412,128 @@ function renderAlertas() {
 // Global variable for timeline range
 let TIMELINE_MONTHS = 6;
 
-function renderChartTimeline(months = TIMELINE_MONTHS) {
-  const container = document.getElementById('chart-timeline-container');
-  if (!container) return;
-
-  const MESES_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  const now = new Date();
+function renderChartTimeline() {
+  var container = document.getElementById('chart-timeline-container');
+  if(!container) return;
   
-  // Build months array based on filter
-  const meses = [];
-  const totalMonths = months === 'all' ? 24 : months; // 'all' shows 2 years max
+  var now = new Date();
+  var mesActual = now.getMonth();
+  var anioActual = now.getFullYear();
+  var mesAnterior = mesActual === 0 ? 11 : mesActual - 1;
+  var anioAnterior = mesActual === 0 ? anioActual - 1 : anioActual;
   
-  for (let i = totalMonths - 1; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    meses.push({ 
-      label: MESES_ES[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2), 
-      mes: MESES_ES[d.getMonth()], 
-      anio: d.getFullYear() 
-    });
-  }
-
-  const ingData = meses.map(m => CACHE.ingresos.filter(r => r.mes === m.mes && r.anio === m.anio).reduce((s,r)=>s+r.monto,0));
-  const gasData = meses.map(m => CACHE.gastos.filter(r => r.mes === m.mes && r.anio === m.anio).reduce((s,r)=>s+r.monto,0));
-  const revData = ingData.map((v,i) => Math.max(0, v - gasData[i]));
-  const labels = meses.map(m => m.label);
-
-  const maxValue = Math.max(...ingData, ...gasData, ...revData, 1000);
-  const width = container.clientWidth || 800;
-  const height = 260;
-  const margin = { top: 20, right: 20, bottom: 40, left: 60 };
-  const innerWidth = width - margin.left - margin.right;
-  const innerHeight = height - margin.top - margin.bottom;
-
-  // Generate smooth path
-  const generatePath = (data, close = false) => {
-    if (data.length === 0) return '';
-    
-    const points = data.map((value, i) => {
-      const x = (i / (data.length - 1)) * innerWidth;
-      const y = innerHeight - (value / maxValue) * innerHeight;
-      return { x, y };
-    });
-
-    let path = `M ${points[0].x} ${points[0].y}`;
-    
-    for (let i = 0; i < points.length - 1; i++) {
-      const x1 = points[i].x;
-      const y1 = points[i].y;
-      const x2 = points[i + 1].x;
-      const y2 = points[i + 1].y;
-      const midX = (x1 + x2) / 2;
-      path += ` C ${midX},${y1} ${midX},${y2} ${x2},${y2}`;
+  var months_es = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  var mesActualName = months_es[mesActual];
+  
+  // Agrupar ingresos por día
+  var ingMesActual = {};
+  var ingMesAnterior = {};
+  
+  (CACHE.ingresos || []).forEach(function(x) {
+    var d = new Date(x.fecha);
+    if(d.getMonth() === mesActual && d.getFullYear() === anioActual) {
+      var day = d.getDate();
+      ingMesActual[day] = (ingMesActual[day] || 0) + (parseFloat(x.monto) || 0);
     }
-    
-    if (close) {
-      path += ` L ${innerWidth} ${innerHeight} L 0 ${innerHeight} Z`;
+    if(d.getMonth() === mesAnterior && d.getFullYear() === anioAnterior) {
+      var day = d.getDate();
+      ingMesAnterior[day] = (ingMesAnterior[day] || 0) + (parseFloat(x.monto) || 0);
     }
-    
-    return path;
-  };
-
-  const ingPath = generatePath(ingData, false);
-  const ingAreaPath = generatePath(ingData, true);
-  const gasPath = generatePath(gasData, false);
-  const gasAreaPath = generatePath(gasData, true);
-  const revPath = generatePath(revData, false);
-  const revAreaPath = generatePath(revData, true);
-
-  // Y-axis ticks
-  const yTicks = 5;
-  const yStep = maxValue / (yTicks - 1);
-  let yTicksHTML = '';
-  for (let i = 0; i < yTicks; i++) {
-    const value = yStep * i;
-    const y = innerHeight - (value / maxValue) * innerHeight;
-    const label = value >= 1000 ? `$${(value / 1000).toFixed(0)}k` : `$${value.toFixed(0)}`;
-    yTicksHTML += `
-      <line x1="0" y1="${y}" x2="${innerWidth}" y2="${y}" stroke="rgba(255,255,255,0.05)" stroke-width="1" stroke-dasharray="4,4"/>
-      <text x="-10" y="${y}" text-anchor="end" dominant-baseline="middle" fill="var(--muted)" font-size="11" class="chart-label">${label}</text>
-    `;
+  });
+  
+  // Datos acumulados
+  var acumActual = 0, acumAnterior = 0;
+  var dataActual = [], dataAnterior = [];
+  for(var i = 1; i <= 31; i++) {
+    acumActual += ingMesActual[i] || 0;
+    acumAnterior += ingMesAnterior[i] || 0;
+    dataActual.push(acumActual);
+    dataAnterior.push(acumAnterior);
   }
-
-  // X-axis labels
-  let xLabelsHTML = '';
-  labels.forEach((label, i) => {
-    const x = (i / (labels.length - 1)) * innerWidth;
-    xLabelsHTML += `<text x="${x}" y="${innerHeight + 25}" text-anchor="middle" fill="var(--muted)" font-size="11" class="chart-label">${label}</text>`;
-  });
-
-  // Interactive dots for each data point
-  let dotsHTML = '';
-  labels.forEach((label, i) => {
-    const x = (i / (labels.length - 1)) * innerWidth;
-    const ingY = innerHeight - (ingData[i] / maxValue) * innerHeight;
-    const gasY = innerHeight - (gasData[i] / maxValue) * innerHeight;
-    const revY = innerHeight - (revData[i] / maxValue) * innerHeight;
-    
-    dotsHTML += `
-      <g class="chart-point-group" data-index="${i}">
-        <circle cx="${x}" cy="${ingY}" r="4" fill="#00E5FF" stroke="var(--bg)" stroke-width="2" opacity="0" class="hover-dot"/>
-        <circle cx="${x}" cy="${gasY}" r="4" fill="#FF4560" stroke="var(--bg)" stroke-width="2" opacity="0" class="hover-dot"/>
-        <circle cx="${x}" cy="${revY}" r="4" fill="#00E396" stroke="var(--bg)" stroke-width="2" opacity="0" class="hover-dot"/>
-        <rect x="${x - 15}" y="0" width="30" height="${innerHeight}" fill="transparent" class="hover-zone" 
-          data-ing="${ingData[i]}" data-gas="${gasData[i]}" data-rev="${revData[i]}" data-label="${label}"/>
-      </g>
-    `;
-  });
-
-  container.innerHTML = `
-    <svg viewBox="0 0 ${width} ${height}" class="area-chart" style="width: 100%; height: 260px;" id="timeline-svg">
-      <defs>
-        <linearGradient id="gradient-ing" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stop-color="#00E5FF" stop-opacity="0.3"/>
-          <stop offset="100%" stop-color="#00E5FF" stop-opacity="0"/>
-        </linearGradient>
-        <linearGradient id="gradient-gas" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stop-color="#FF4560" stop-opacity="0.3"/>
-          <stop offset="100%" stop-color="#FF4560" stop-opacity="0"/>
-        </linearGradient>
-        <linearGradient id="gradient-rev" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stop-color="#00E396" stop-opacity="0.3"/>
-          <stop offset="100%" stop-color="#00E396" stop-opacity="0"/>
-        </linearGradient>
-      </defs>
-      
-      <g transform="translate(${margin.left}, ${margin.top})">
-        ${yTicksHTML}
-        
-        <!-- Revenue area -->
-        <path d="${revAreaPath}" fill="url(#gradient-rev)" class="area-fill" style="animation: fadeIn 0.8s ease"/>
-        <path d="${revPath}" fill="none" stroke="#00E396" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="area-line" style="animation: drawLine 1.2s ease"/>
-        
-        <!-- Gastos area -->
-        <path d="${gasAreaPath}" fill="url(#gradient-gas)" class="area-fill" style="animation: fadeIn 0.8s ease 0.1s both"/>
-        <path d="${gasPath}" fill="none" stroke="#FF4560" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="area-line" style="animation: drawLine 1.2s ease 0.1s both"/>
-        
-        <!-- Ingresos area -->
-        <path d="${ingAreaPath}" fill="url(#gradient-ing)" class="area-fill" style="animation: fadeIn 0.8s ease 0.2s both"/>
-        <path d="${ingPath}" fill="none" stroke="#00E5FF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="area-line" style="animation: drawLine 1.2s ease 0.2s both"/>
-        
-        ${dotsHTML}
-        ${xLabelsHTML}
-      </g>
-    </svg>
-    
-    <div id="chart-tooltip" style="
-      position: absolute;
-      background: rgba(10,10,10,0.95);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 8px;
-      padding: 10px 12px;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.2s;
-      font-size: 12px;
-      z-index: 1000;
-    "></div>
-  `;
-
-  // Add interactivity
-  const svg = container.querySelector('svg');
-  const tooltip = container.querySelector('#chart-tooltip');
-  const hoverZones = container.querySelectorAll('.hover-zone');
-
-  hoverZones.forEach(zone => {
-    zone.addEventListener('mouseenter', (e) => {
-      const ing = e.target.dataset.ing;
-      const gas = e.target.dataset.gas;
-      const rev = e.target.dataset.rev;
-      const label = e.target.dataset.label;
-      
-      // Show dots
-      const group = e.target.closest('.chart-point-group');
-      group.querySelectorAll('.hover-dot').forEach(dot => dot.style.opacity = '1');
-      
-      // Show tooltip
-      tooltip.innerHTML = `
-        <div style="font-weight: 600; margin-bottom: 6px; color: rgba(255,255,255,0.9)">${label}</div>
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-          <span style="width: 8px; height: 8px; background: #00E5FF; border-radius: 2px;"></span>
-          <span style="color: rgba(255,255,255,0.7)">Ingresos:</span>
-          <span style="margin-left: auto; font-weight: 600; color: #00E5FF">${fmt(ing)}</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-          <span style="width: 8px; height: 8px; background: #FF4560; border-radius: 2px;"></span>
-          <span style="color: rgba(255,255,255,0.7)">Gastos:</span>
-          <span style="margin-left: auto; font-weight: 600; color: #FF4560">${fmt(gas)}</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="width: 8px; height: 8px; background: #00E396; border-radius: 2px;"></span>
-          <span style="color: rgba(255,255,255,0.7)">Revenue:</span>
-          <span style="margin-left: auto; font-weight: 600; color: #00E396">${fmt(rev)}</span>
-        </div>
-      `;
-      tooltip.style.opacity = '1';
-    });
-
-    zone.addEventListener('mousemove', (e) => {
-      const rect = container.getBoundingClientRect();
-      tooltip.style.left = (e.clientX - rect.left + 15) + 'px';
-      tooltip.style.top = (e.clientY - rect.top - 60) + 'px';
-    });
-
-    zone.addEventListener('mouseleave', (e) => {
-      const group = e.target.closest('.chart-point-group');
-      group.querySelectorAll('.hover-dot').forEach(dot => dot.style.opacity = '0');
-      tooltip.style.opacity = '0';
-    });
-  });
+  
+  var totalActual = acumActual;
+  var totalAnterior = acumAnterior;
+  var mejora = totalAnterior > 0 ? ((totalActual - totalAnterior) / totalAnterior * 100) : 0;
+  
+  // HTML del gráfico
+  var html = '<div style="padding:16px">';
+  
+  // Header
+  html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px">';
+  html += '<div>';
+  html += '<div style="font-size:11px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:1px">Cash Collected</div>';
+  html += '<div style="font-size:20px;color:#fff;font-weight:bold;margin-top:6px">' + mesActualName + ' 2026</div>';
+  html += '<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:6px">MTD</div>';
+  html += '</div>';
+  html += '<div style="text-align:right">';
+  html += '<div style="font-size:24px;color:#00E396;font-weight:bold">$' + fmt(totalActual) + '</div>';
+  html += '<div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:6px">TOTAL ACUMULADO</div>';
+  html += '</div>';
+  html += '</div>';
+  
+  // Comparación
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:0 12px;margin-bottom:16px;font-size:12px">';
+  var mejora_color = mejora >= 0 ? '#00E396' : '#FF4560';
+  html += '<div style="color:' + mejora_color + '">↑ ' + mejora.toFixed(1) + '% vs Mes Anterior</div>';
+  html += '<div style="color:rgba(255,255,255,0.5)">Mes anterior: $' + fmt(totalAnterior) + '</div>';
+  html += '</div>';
+  
+  // SVG Gráfico
+  var width = 800, height = 280;
+  var margin = {top: 20, right: 20, bottom: 40, left: 50};
+  var innerWidth = width - margin.left - margin.right;
+  var innerHeight = height - margin.top - margin.bottom;
+  
+  var maxVal = Math.max(totalActual, totalAnterior) * 1.05;
+  if(maxVal === 0) maxVal = 1000;
+  var scaleY = innerHeight / maxVal;
+  var scaleX = innerWidth / 30;
+  
+  var svg = '<svg width="100%" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '" preserveAspectRatio="none" style="margin-top:10px">';
+  
+  // Línea mes anterior (punteada)
+  var pathAnt = 'M';
+  for(var i = 0; i < 31; i++) {
+    var x = margin.left + i * scaleX;
+    var y = margin.top + innerHeight - (dataAnterior[i] || 0) * scaleY;
+    pathAnt += (i === 0 ? ' ' : ' L ') + x + ' ' + y;
+  }
+  svg += '<path d="' + pathAnt + '" stroke="rgba(255,255,255,0.2)" stroke-width="2" fill="none" stroke-dasharray="4,4"/>';
+  
+  // Línea mes actual (verde) + área
+  var pathAct = 'M';
+  for(var i = 0; i < 31; i++) {
+    var x = margin.left + i * scaleX;
+    var y = margin.top + innerHeight - (dataActual[i] || 0) * scaleY;
+    pathAct += (i === 0 ? ' ' : ' L ') + x + ' ' + y;
+  }
+  svg += '<path d="' + pathAct + '" stroke="#00E396" stroke-width="3" fill="none"/>';
+  
+  var areaPath = pathAct + ' L ' + (margin.left + 30*scaleX) + ' ' + (margin.top + innerHeight) + ' L ' + margin.left + ' ' + (margin.top + innerHeight) + ' Z';
+  svg += '<path d="' + areaPath + '" fill="rgba(0,227,150,0.1)"/>';
+  
+  // Eje X
+  svg += '<line x1="' + margin.left + '" y1="' + (margin.top + innerHeight) + '" x2="' + (width - margin.right) + '" y2="' + (margin.top + innerHeight) + '" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>';
+  
+  // Labels días
+  for(var i = 0; i <= 30; i += 5) {
+    var x = margin.left + i * scaleX;
+    svg += '<text x="' + x + '" y="' + (margin.top + innerHeight + 25) + '" fill="rgba(255,255,255,0.4)" font-size="11" text-anchor="middle">' + (i+1) + '</text>';
+  }
+  
+  // Leyenda
+  svg += '<g transform="translate(' + margin.left + ',10)">';
+  svg += '<line x1="0" y1="0" x2="10" y2="0" stroke="#00E396" stroke-width="2"/>';
+  svg += '<text x="15" y="4" fill="rgba(255,255,255,0.6)" font-size="11">Mes Actual</text>';
+  svg += '<line x1="120" y1="0" x2="130" y2="0" stroke="rgba(255,255,255,0.2)" stroke-width="2" stroke-dasharray="4,4"/>';
+  svg += '<text x="135" y="4" fill="rgba(255,255,255,0.6)" font-size="11">Mes Anterior</text>';
+  svg += '</g>';
+  
+  svg += '</svg>';
+  html += svg;
+  html += '</div>';
+  
+  container.innerHTML = html;
 }
 
 function renderChartGastos(porCat, meta = {}) {
@@ -4705,7 +4619,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const customDateBtn = document.getElementById('custom-date-btn');
   
   const rangeLabels = {
-    '6m': 'Últimos 6 meses',
+    '6m': 'Mayo 2026',
     '1y': 'Último año',
     '2y': 'Últimos 2 años',
     'all': 'Todo el período'
