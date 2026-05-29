@@ -791,54 +791,11 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
   .form-row,.form-row-3 { grid-template-columns:1fr; }
 }
 </style>
-
 <style>
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-  
-  .btn-loading {
-    pointer-events: none !important;
-    opacity: 0.6;
-  }
-  
-  .spinner {
-    display: inline-block;
-    width: 14px;
-    height: 14px;
-    border: 2px solid rgba(255,255,255,0.3);
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin-right: 8px;
-    vertical-align: middle;
-  }
-  
-  .toast {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: rgba(0,0,0,0.9);
-    color: #fff;
-    padding: 14px 20px;
-    border-radius: 8px;
-    font-size: 13px;
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255,255,255,0.1);
-  }
-  
-  .toast .spinner {
-    width: 12px;
-    height: 12px;
-    margin: 0;
-  }
-</style>
-</head>
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 8px; }
+.toast { position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.9); color: #fff; padding: 12px 16px; border-radius: 6px; font-size: 12px; z-index: 9999; display: flex; align-items: center; gap: 8px; }
+</style></head>
 <body>
 
 <!-- LOGIN -->
@@ -990,18 +947,29 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
             <div>
               <div class="chart-title" style="margin-bottom:2px">Ingresos vs Gastos</div>
-              <div style="font-size:11px;color:var(--muted)" id="timeline-range-label">Mayo 2026</div>
+              <div style="font-size:11px;color:var(--muted)" id="timeline-range-label">Últimos 6 meses</div>
             </div>
             <div style="display:flex;gap:8px;align-items:center">
-              
-              
-              
-              
-              
+              <button class="filter-btn active" data-range="6m">6M</button>
+              <button class="filter-btn" data-range="1y">1Y</button>
+              <button class="filter-btn" data-range="2y">2Y</button>
+              <button class="filter-btn" data-range="all">Todo</button>
+              <button class="filter-btn" id="custom-date-btn" data-range="custom">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="margin-right: 4px;">
+                  <path fill-rule="evenodd" clip-rule="evenodd" d="M5.5 0.5V1.25V2H10.5V1.25V0.5H12V1.25V2H14H15.5V3.5V13.5C15.5 14.8807 14.3807 16 13 16H3C1.61929 16 0.5 14.8807 0.5 13.5V3.5V2H2H4V1.25V0.5H5.5ZM2 3.5H14V6H2V3.5ZM2 7.5V13.5C2 14.0523 2.44772 14.5 3 14.5H13C13.5523 14.5 14 14.0523 14 13.5V7.5H2Z"/>
+                </svg>
+                Personalizado
+              </button>
             </div>
           </div>
-          
-          <div id="chart-timeline-container" style="padding:20px;"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <div style="display:flex;gap:16px">
+              <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,0.5)"><span style="width:24px;height:2px;background:#00E5FF;display:inline-block;border-radius:2px"></span>Ingresos</span>
+              <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,0.5)"><span style="width:24px;height:2px;background:#FF4560;display:inline-block;border-radius:2px"></span>Gastos</span>
+              <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,0.5)"><span style="width:24px;height:2px;background:#00E396;display:inline-block;border-radius:2px"></span>Revenue</span>
+            </div>
+          </div>
+          <div id="chart-timeline-container" style="position:relative;height:260px" role="img" aria-label="Línea de tiempo ingresos vs gastos"></div>
         </div>
       </div>
 
@@ -1203,7 +1171,1200 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
             <div style="font-size:12px;color:var(--muted);margin-top:4px">Se usa para calcular el total estimado en USD en Tesorería</div>
           </div>
         </div>
-        
+        <div style="display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:var(--rsm);padding:10px 14px">
+            <span style="font-size:13px;color:var(--muted)">1 USD =</span>
+            <input type="number" id="cfg-tasa" placeholder="1200" min="1" step="1"
+              style="background:transparent;border:none;color:var(--gold);font-size:18px;font-weight:600;width:100px;outline:none"
+              onchange="guardarTasa()" />
+            <span style="font-size:13px;color:var(--muted)">ARS</span>
+          </div>
+          <button class="cfg-btn cfg-gold" style="flex:0;padding:10px 18px;width:auto" onclick="guardarTasa()">
+            <span style="font-size:14px">💾</span>
+            <div><div style="font-weight:500;font-size:13px">Guardar tasa</div></div>
+          </button>
+          <div style="font-size:12px;color:var(--muted)" id="cfg-tasa-info"></div>
+        </div>
+      </div>
+
+      <!-- DATOS DE PRUEBA -->
+      <div class="table-card" style="margin-bottom:16px;border-color:rgba(37,99,235,0.2)">
+        <div class="table-head">
+          <div>
+            <div class="table-title">Datos de prueba</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px">Cargá un escenario real para ver cómo funciona el dashboard completo</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:4px">
+          <button class="cfg-btn cfg-blue" onclick="cargarDatosPrueba()">
+            <span style="font-size:18px">🚀</span>
+            <div>
+              <div style="font-weight:500;font-size:13px">Cargar escenario completo</div>
+              <div style="font-size:11px;color:var(--muted)">Equipo, ventas, gastos, subs</div>
+            </div>
+          </button>
+          <button class="cfg-btn cfg-red" onclick="limpiarDatosPrueba()">
+            <span style="font-size:18px">🧹</span>
+            <div>
+              <div style="font-weight:500;font-size:13px">Limpiar datos de prueba</div>
+              <div style="font-size:11px;color:var(--muted)">Solo borra lo local (ventas, subs, tesorería)</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- EXPORTAR / IMPORTAR -->
+      <div class="table-card" style="margin-bottom:16px">
+        <div class="table-head">
+          <div>
+            <div class="table-title">Exportar e importar</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px">Backup completo de todos los datos locales (ventas, cuotas, suscripciones, tesorería)</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:4px">
+          <button class="cfg-btn cfg-green" onclick="exportarDatos()">
+            <span style="font-size:18px">⬇</span>
+            <div>
+              <div style="font-weight:500;font-size:13px">Exportar backup</div>
+              <div style="font-size:11px;color:var(--muted)">Descarga un archivo .json</div>
+            </div>
+          </button>
+          <label class="cfg-btn cfg-gold" style="cursor:pointer">
+            <span style="font-size:18px">⬆</span>
+            <div>
+              <div style="font-weight:500;font-size:13px">Importar backup</div>
+              <div style="font-size:11px;color:var(--muted)">Restaura desde un .json</div>
+            </div>
+            <input type="file" accept=".json" onchange="importarDatos(event)" style="display:none" />
+          </label>
+        </div>
+      </div>
+
+      <!-- RESTAURAR -->
+      <div class="table-card" style="border-color:rgba(231,76,60,0.2)">
+        <div class="table-head">
+          <div>
+            <div class="table-title" style="color:var(--red)">Zona de peligro</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px">Estas acciones no se pueden deshacer</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:4px">
+          <button class="cfg-btn cfg-red" onclick="restaurarFactory()">
+            <span style="font-size:18px">⚠️</span>
+            <div>
+              <div style="font-weight:500;font-size:13px">Restaurar de fábrica</div>
+              <div style="font-size:11px;color:var(--muted)">Borra TODO lo local. El Sheet no se toca.</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- INFO DEL SISTEMA -->
+      <div class="table-card" style="margin-top:16px">
+        <div class="table-head"><div class="table-title">Estado del sistema</div></div>
+        <div id="cfg-info" style="font-size:13px;color:var(--muted);line-height:2"></div>
+      </div>
+
+    </section>
+
+  </main>
+</div>
+
+<!-- ======= MODALES ======= -->
+
+<!-- Ingreso simple -->
+<div class="modal-overlay" id="modal-ingreso-simple">
+  <div class="modal">
+    <div class="modal-title">Ingreso simple</div>
+    <div class="modal-sub">Pago, transferencia u otro ingreso sin cuotas</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Nombre / Fuente</label><input class="form-input" id="is-nombre" placeholder="Ej: Juan García" /></div>
+      <div class="form-group"><label class="form-label">Fecha</label><input class="form-input" type="date" id="is-fecha" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Vendedor</label>
+        <select class="form-select" id="is-vendedor"><option value="">— Sin vendedor —</option></select>
+      </div>
+      <div class="form-group"><label class="form-label">Monto (USD)</label><input class="form-input" type="number" id="is-monto" placeholder="0" min="0" step="0.01" /></div>
+    </div>
+    <div class="form-group"><label class="form-label">Concepto</label><input class="form-input" id="is-concepto" placeholder="Descripción del ingreso" /></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('ingreso-simple')">Cancelar</button>
+      <button class="btn-save" onclick="saveIngresoSimple()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Nueva venta con cuotas -->
+<div class="modal-overlay" id="modal-venta">
+  <div class="modal">
+    <div class="modal-title">Nueva Venta</div>
+    <div class="modal-sub">Registrá la venta y el plan de cobro</div>
+    <div class="divider-label" style="margin-top:0">👤 Datos del cliente</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Nombre del cliente</label><input class="form-input" id="v-cliente" placeholder="Nombre completo" /></div>
+      <div class="form-group"><label class="form-label">Teléfono</label><input class="form-input" id="v-telefono" placeholder="+54 11 ..." /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Email</label><input class="form-input" type="email" id="v-email" placeholder="cliente@email.com" /></div>
+      <div class="form-group"><label class="form-label">Fecha de venta</label><input class="form-input" type="date" id="v-fecha" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Vendedor</label>
+        <select class="form-select" id="v-vendedor"><option value="">— Sin vendedor —</option></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Servicio / Producto</label>
+        <input class="form-input" id="v-producto" placeholder="Ej: Membresía anual" />
+      </div>
+    </div>
+    <div class="divider-label">💰 Estructura de pago</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Precio total (USD)</label><input class="form-input" type="number" id="v-total" placeholder="0" min="0" step="0.01" oninput="calcVenta()" /></div>
+      <div class="form-group"><label class="form-label">Adelanto / Seña (USD)</label><input class="form-input" type="number" id="v-adelanto" placeholder="0" min="0" step="0.01" oninput="calcVenta()" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Cantidad de cuotas</label>
+        <select class="form-select" id="v-cuotas" onchange="calcVenta()">
+          <option value="1">1 (pago único)</option>
+          <option value="2">2 cuotas</option>
+          <option value="3">3 cuotas</option>
+          <option value="4">4 cuotas</option>
+          <option value="6">6 cuotas</option>
+          <option value="12">12 cuotas</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cuenta de cobro</label>
+        <select class="form-select" id="v-metodo-pago">
+          <option value="">— Seleccionar cuenta —</option>
+        </select>
+        <div class="form-hint">La cuenta donde se deposita el adelanto. Si no tenés cuentas, <span style="color:var(--accent);cursor:pointer" onclick="alert('Andá a Tesorería → + Agregar cuenta para crear tus cuentas de cobro')">creá una primero</span>.</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Primer vencimiento de cuota</label>
+      <input class="form-input" type="date" id="v-primer-venc" />
+    </div>
+    <div id="v-resumen" style="background:var(--surface);border-radius:var(--rsm);padding:12px 14px;font-size:13px;display:none;margin-bottom:4px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--muted)">Saldo a financiar</span><span id="v-saldo" style="color:var(--gold);font-weight:500">—</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Valor por cuota</span><span id="v-por-cuota" style="color:var(--accent);font-weight:500">—</span></div>
+    </div>
+    <div class="form-group"><label class="form-label">Notas</label><input class="form-input" id="v-notas" placeholder="Condiciones, observaciones..." /></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('venta')">Cancelar</button>
+      <button class="btn-save" onclick="saveVenta()">Registrar venta</button>
+    </div>
+  </div>
+</div>
+
+<!-- Editar ingreso -->
+<div class="modal-overlay" id="modal-edit-ingreso">
+  <div class="modal">
+    <div class="modal-title" id="ei-title">Editar Ingreso</div>
+    <div class="modal-sub" id="ei-sub"></div>
+    <input type="hidden" id="ei-id" />
+    <input type="hidden" id="ei-es-venta" />
+
+    <!-- Sección cliente (solo para ventas) -->
+    <div id="ei-seccion-cliente">
+      <div class="form-section-label" style="font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;margin:8px 0 6px">👤 Datos del cliente</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Nombre del cliente</label><input class="form-input" id="ei-nombre" placeholder="Nombre completo" /></div>
+        <div class="form-group"><label class="form-label">Teléfono</label><input class="form-input" id="ei-telefono" placeholder="+54 11 ..." /></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="ei-email" placeholder="cliente@email.com" /></div>
+        <div class="form-group"><label class="form-label">Fecha de venta</label><input class="form-input" type="date" id="ei-fecha" /></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Vendedor</label><select class="form-select" id="ei-vendedor"><option value="">— Sin vendedor —</option></select></div>
+        <div class="form-group"><label class="form-label">Servicio / Producto</label><input class="form-input" id="ei-producto" placeholder="Ej: Membresía anual" /></div>
+      </div>
+    </div>
+
+    <!-- Sección ingreso simple (cuando no es venta) -->
+    <div id="ei-seccion-simple" style="display:none">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Nombre</label><input class="form-input" id="ei-nombre-simple" /></div>
+        <div class="form-group"><label class="form-label">Fecha</label><input class="form-input" type="date" id="ei-fecha-simple" /></div>
+      </div>
+    </div>
+
+    <div class="form-section-label" style="font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 6px">💰 Estructura de pago</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Precio total (USD)</label><input class="form-input" type="number" id="ei-total" placeholder="0" min="0" step="0.01" /></div>
+      <div class="form-group"><label class="form-label">Adelanto / Seña (USD)</label><input class="form-input" type="number" id="ei-adelanto" placeholder="0" min="0" step="0.01" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Método de pago</label>
+        <select class="form-select" id="ei-metodo">
+          <option value="">— Seleccioná —</option>
+          <option>Transferencia bancaria</option><option>PayPal</option><option>Wise</option>
+          <option>Crypto</option><option>Tarjeta</option><option>Efectivo</option><option>Otro</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Monto (USD)</label><input class="form-input" type="number" id="ei-monto" /></div>
+    </div>
+    <div class="form-group"><label class="form-label">Concepto</label><input class="form-input" id="ei-concepto" placeholder="Descripción del ingreso" /></div>
+    <div class="form-group"><label class="form-label">Notas</label><input class="form-input" id="ei-notas" placeholder="Observaciones..." /></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('edit-ingreso')">Cancelar</button>
+      <button class="btn-save" onclick="updateIngreso()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- Gasto -->
+<div class="modal-overlay" id="modal-gasto">
+  <div class="modal">
+    <div class="modal-title">Nuevo Gasto</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Categoría</label>
+        <select class="form-select" id="gas-categoria" onchange="toggleCatCustom('gas')">
+          <option>ADS</option><option>Herramientas</option><option>Equipo</option><option>Otro</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Fecha</label><input class="form-input" type="date" id="gas-fecha" /></div>
+    </div>
+    <div class="form-group" id="gas-cat-custom-wrap" style="display:none">
+      <label class="form-label">Nueva categoría</label>
+      <input class="form-input" id="gas-cat-custom" placeholder="Nombre de la categoría..." />
+    </div>
+    <div class="form-group"><label class="form-label">Concepto</label><input class="form-input" id="gas-concepto" placeholder="Descripción del gasto" /></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Monto (USD)</label><input class="form-input" type="number" id="gas-monto" placeholder="0" min="0" step="0.01" /></div>
+      <div class="form-group">
+        <label class="form-label">Método de pago</label>
+        <select class="form-select" id="gas-metodo">
+          <option value="">— Seleccioná —</option>
+          <option>Tarjeta personal</option><option>Tarjeta empresa</option>
+          <option>PayPal</option><option>Wise</option><option>Transferencia</option>
+          <option>Crypto</option><option>Efectivo</option><option>Otro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">¿Quién pagó?</label>
+      <select class="form-select" id="gas-pagador">
+        <option value="">— Seleccioná —</option>
+        <option value="">— Seleccioná —</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('gasto')">Cancelar</button>
+      <button class="btn-save" onclick="saveGasto()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Editar gasto -->
+<div class="modal-overlay" id="modal-edit-gasto">
+  <div class="modal">
+    <div class="modal-title">Editar Gasto</div>
+    <input type="hidden" id="eg-id" />
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Categoría</label>
+        <select class="form-select" id="eg-categoria" onchange="toggleCatCustom('eg')">
+          <option>ADS</option><option>Herramientas</option><option>Equipo</option><option>Otro</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Fecha</label><input class="form-input" type="date" id="eg-fecha" /></div>
+    </div>
+    <div class="form-group" id="eg-cat-custom-wrap" style="display:none">
+      <label class="form-label">Nueva categoría</label>
+      <input class="form-input" id="eg-cat-custom" placeholder="Nombre de la categoría..." />
+    </div>
+    <div class="form-group"><label class="form-label">Concepto</label><input class="form-input" id="eg-concepto" /></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Monto (USD)</label><input class="form-input" type="number" id="eg-monto" /></div>
+      <div class="form-group">
+        <label class="form-label">Método de pago</label>
+        <select class="form-select" id="eg-metodo">
+          <option value="">— Seleccioná —</option>
+          <option>Tarjeta personal</option><option>Tarjeta empresa</option>
+          <option>PayPal</option><option>Wise</option><option>Transferencia</option>
+          <option>Crypto</option><option>Efectivo</option><option>Otro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">¿Quién pagó?</label>
+      <select class="form-select" id="eg-pagador">
+        <option value="">— Seleccioná —</option>
+        <option value="">— Seleccioná —</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('edit-gasto')">Cancelar</button>
+      <button class="btn-save" onclick="updateGasto()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- Suscripción -->
+<div class="modal-overlay" id="modal-sub">
+  <div class="modal">
+    <div class="modal-title">Nueva Suscripción</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Herramienta / Servicio</label><input class="form-input" id="sub-nombre" placeholder="Ej: GoHighLevel" /></div>
+      <div class="form-group"><label class="form-label">Emoji</label><input class="form-input" id="sub-emoji" placeholder="🔧" maxlength="4" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Plan</label>
+        <select class="form-select" id="sub-plan">
+          <option value="gratuito">Gratuito</option><option value="basico">Básico</option>
+          <option value="pro">Pro</option><option value="business">Business</option>
+          <option value="enterprise">Enterprise</option><option value="trial">Trial</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Ciclo de pago</label>
+        <select class="form-select" id="sub-ciclo">
+          <option value="mensual">Mensual</option><option value="anual">Anual</option>
+          <option value="unico">Pago único</option><option value="gratis">Sin costo</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Costo (USD)</label><input class="form-input" type="number" id="sub-costo-val" placeholder="0" min="0" step="0.01" /></div>
+      <div class="form-group"><label class="form-label">Próximo vencimiento</label><input class="form-input" type="date" id="sub-vence" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Categoría</label>
+        <select class="form-select" id="sub-cat">
+          <option>Marketing</option><option>CRM</option><option>Email</option>
+          <option>Video</option><option>Diseño</option><option>Analytics</option>
+          <option>IA</option><option>Hosting</option><option>Otro</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Cuenta / Usuario</label><input class="form-input" id="sub-cuenta" placeholder="email o usuario" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">¿Quién paga?</label>
+        <select class="form-select" id="sub-pagador">
+          <option value="">— Seleccioná —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Método de pago</label>
+        <select class="form-select" id="sub-metodo-pago" onchange="toggleTarjetaDigits('sub')">
+          <option value="">— Seleccioná —</option>
+          <option>Tarjeta personal</option><option>Tarjeta empresa</option>
+          <option>PayPal</option><option>Wise</option><option>Transferencia</option>
+          <option>Crypto</option><option>Efectivo</option><option>Otro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group" id="sub-tarjeta-wrap" style="display:none">
+      <label class="form-label">Últimos 4 dígitos de la tarjeta</label>
+      <input class="form-input" id="sub-tarjeta-digits" placeholder="Ej: 4521" maxlength="4" style="width:120px" />
+    </div>
+    <div class="form-group"><label class="form-label">Notas</label><input class="form-input" id="sub-notas" placeholder="Observaciones, condiciones, link de factura..." /></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('sub')">Cancelar</button>
+      <button class="btn-save" onclick="saveSub()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Editar suscripción -->
+<div class="modal-overlay" id="modal-edit-sub">
+  <div class="modal">
+    <div class="modal-title">Editar Suscripción</div>
+    <input type="hidden" id="es-id" />
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Herramienta</label><input class="form-input" id="es-nombre" /></div>
+      <div class="form-group"><label class="form-label">Emoji</label><input class="form-input" id="es-emoji" maxlength="4" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Plan</label>
+        <select class="form-select" id="es-plan">
+          <option value="gratuito">Gratuito</option><option value="basico">Básico</option>
+          <option value="pro">Pro</option><option value="business">Business</option>
+          <option value="enterprise">Enterprise</option><option value="trial">Trial</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Ciclo</label>
+        <select class="form-select" id="es-ciclo">
+          <option value="mensual">Mensual</option><option value="anual">Anual</option>
+          <option value="unico">Pago único</option><option value="gratis">Sin costo</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Costo (USD)</label><input class="form-input" type="number" id="es-costo" /></div>
+      <div class="form-group"><label class="form-label">Vencimiento</label><input class="form-input" type="date" id="es-vence" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Categoría</label>
+        <select class="form-select" id="es-cat">
+          <option>Marketing</option><option>CRM</option><option>Email</option>
+          <option>Video</option><option>Diseño</option><option>Analytics</option>
+          <option>IA</option><option>Hosting</option><option>Otro</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Cuenta / Usuario</label><input class="form-input" id="es-cuenta" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">¿Quién paga?</label>
+        <select class="form-select" id="es-pagador">
+          <option value="">— Seleccioná —</option>
+          <option value="">— Seleccioná —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Método de pago</label>
+        <select class="form-select" id="es-metodo-pago" onchange="toggleTarjetaDigits('es')">
+          <option value="">— Seleccioná —</option>
+          <option>Tarjeta personal</option><option>Tarjeta empresa</option>
+          <option>PayPal</option><option>Wise</option><option>Transferencia</option>
+          <option>Crypto</option><option>Efectivo</option><option>Otro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group" id="es-tarjeta-wrap" style="display:none">
+      <label class="form-label">Últimos 4 dígitos de la tarjeta</label>
+      <input class="form-input" id="es-tarjeta-digits" placeholder="Ej: 4521" maxlength="4" style="width:120px" />
+    </div>
+    <div class="form-group"><label class="form-label">Notas</label><input class="form-input" id="es-notas" /></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('edit-sub')">Cancelar</button>
+      <button class="btn-save" onclick="updateSub()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- Miembro -->
+<div class="modal-overlay" id="modal-miembro">
+  <div class="modal">
+    <div class="modal-title">Nuevo Miembro</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Nombre</label><input class="form-input" id="mie-nombre" placeholder="Ej: Eveling" /></div>
+      <div class="form-group"><label class="form-label">Rol</label><input class="form-input" id="mie-rol" placeholder="Ej: Vendedora" /></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tipo de comisión</label>
+      <select class="form-select" id="mie-tipo" onchange="toggleTipoMiembro()">
+        <option value="porcentaje">% sobre ingresos totales</option>
+        <option value="revenue_pct">% sobre revenue neto (ganancia)</option>
+        <option value="vendedor">% sobre lo cobrado de sus ventas (cuotas + seña)</option>
+        <option value="vendedor_total">% sobre el ticket total de sus ventas</option>
+        <option value="fijo">Monto fijo ($)</option>
+        <option value="restante">Socio — se lleva el restante</option>
+      </select>
+    </div>
+    <div class="form-group" id="mie-valor-wrap">
+      <label class="form-label" id="mie-val-label">Porcentaje (%)</label>
+      <input class="form-input" type="number" id="mie-valor" placeholder="0" min="0" step="0.01" />
+      <div class="form-hint" id="mie-hint"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('miembro')">Cancelar</button>
+      <button class="btn-save" onclick="saveMiembro()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Editar miembro -->
+<div class="modal-overlay" id="modal-edit-miembro">
+  <div class="modal">
+    <div class="modal-title">Editar Miembro</div>
+    <input type="hidden" id="em-id" />
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Nombre</label><input class="form-input" id="em-nombre" /></div>
+      <div class="form-group"><label class="form-label">Rol</label><input class="form-input" id="em-rol" /></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tipo de comisión</label>
+      <select class="form-select" id="em-tipo" onchange="toggleTipoEditMiembro()">
+        <option value="porcentaje">% sobre ingresos totales</option>
+        <option value="revenue_pct">% sobre revenue neto (ganancia)</option>
+        <option value="vendedor">% sobre lo cobrado de sus ventas (cuotas + seña)</option>
+        <option value="vendedor_total">% sobre el ticket total de sus ventas</option>
+        <option value="fijo">Monto fijo ($)</option>
+        <option value="restante">Socio — se lleva el restante</option>
+      </select>
+    </div>
+    <div class="form-group" id="em-valor-wrap">
+      <label class="form-label" id="em-val-label">Porcentaje (%)</label>
+      <input class="form-input" type="number" id="em-valor" min="0" step="0.01" />
+      <div class="form-hint" id="em-hint"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('edit-miembro')">Cancelar</button>
+      <button class="btn-save" onclick="updateMiembro()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal nueva cuenta -->
+<div class="modal-overlay" id="modal-cuenta">
+  <div class="modal">
+    <div class="modal-title">Nueva Cuenta</div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Nombre</label><input class="form-input" id="cta-nombre" placeholder="Ej: Cuenta USD Wise" /></div>
+      <div class="form-group"><label class="form-label">Emoji</label><input class="form-input" id="cta-emoji" placeholder="💵" maxlength="4" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <select class="form-select" id="cta-tipo">
+          <option value="efectivo">Efectivo</option>
+          <option value="banco">Banco / Transferencia</option>
+          <option value="digital">Billetera digital</option>
+          <option value="crypto">Crypto</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Moneda</label>
+        <select class="form-select" id="cta-moneda">
+          <option value="USD">USD (Dólares)</option>
+          <option value="ARS">ARS (Pesos)</option>
+          <option value="EUR">EUR (Euros)</option>
+          <option value="USDT">USDT</option>
+          <option value="BTC">BTC</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Saldo inicial</label><input class="form-input" type="number" id="cta-saldo" placeholder="0" min="0" step="0.01" /></div>
+    <div class="form-group"><label class="form-label">Descripción / Datos de la cuenta</label><input class="form-input" id="cta-desc" placeholder="CBU, dirección wallet, usuario..." /></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('cuenta')">Cancelar</button>
+      <button class="btn-save" onclick="saveCuenta()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal movimiento -->
+<div class="modal-overlay" id="modal-movimiento">
+  <div class="modal">
+    <div class="modal-title">Nuevo Movimiento</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <select class="form-select" id="mov-tipo" onchange="toggleMovTipo()">
+          <option value="entrada">Entrada de dinero</option>
+          <option value="salida">Salida de dinero</option>
+          <option value="transferencia">Transferencia entre cuentas</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Fecha</label><input class="form-input" type="date" id="mov-fecha" /></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Cuenta</label>
+      <select class="form-select" id="mov-cuenta"></select>
+    </div>
+    <div class="form-group" id="mov-cuenta-dest-wrap" style="display:none">
+      <label class="form-label">Cuenta destino</label>
+      <select class="form-select" id="mov-cuenta-dest"></select>
+    </div>
+    <div class="form-group"><label class="form-label">Descripción</label><input class="form-input" id="mov-desc" placeholder="¿De dónde viene o adónde va?" /></div>
+    <div class="form-group"><label class="form-label">Monto</label><input class="form-input" type="number" id="mov-monto" placeholder="0" min="0" step="0.01" /></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('movimiento')">Cancelar</button>
+      <button class="btn-save" onclick="saveMovimiento()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal cobro cuota -->
+<div class="modal-overlay" id="modal-cobro">
+  <div class="modal">
+    <div class="modal-title" id="cobro-title">Registrar cobro</div>
+    <div class="modal-sub" id="cobro-sub"></div>
+    <input type="hidden" id="cobro-venta-id" />
+    <input type="hidden" id="cobro-cuota-idx" />
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Monto cobrado (USD)</label>
+        <input class="form-input" type="number" id="cobro-monto" placeholder="0" min="0" step="0.01" />
+        <div class="form-hint">Podés modificar si cobró un monto diferente</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Método de pago</label>
+        <select class="form-select" id="cobro-metodo">
+          <option value="Transferencia">Transferencia</option>
+          <option value="Efectivo">Efectivo</option>
+          <option value="Wise">Wise</option>
+          <option value="PayPal">PayPal</option>
+          <option value="Crypto">Crypto</option>
+          <option value="Tarjeta">Tarjeta</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">¿A qué cuenta entra el dinero?</label>
+      <select class="form-select" id="cobro-cuenta">
+        <option value="">— No registrar en tesorería —</option>
+      </select>
+      <div class="form-hint">Si elegís una cuenta, el ingreso se suma automáticamente a tesorería</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Fecha de cobro</label>
+      <input class="form-input" type="date" id="cobro-fecha" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notas del cobro</label>
+      <input class="form-input" id="cobro-notas" placeholder="Referencia de transferencia, observaciones..." />
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('cobro')">Cancelar</button>
+      <button class="btn-save" onclick="confirmarCobro()">Confirmar cobro</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+const API_URL = 'https://script.google.com/macros/s/AKfycbxI_d6SGxrgXVVvD8H4nmH81TYOBdomysAvDuaCoo-EdEjoR67AORuU8eh5btBg-Bx_3g/exec';
+
+let TOKEN = localStorage.getItem('dash_token') || '';
+let CACHE = { ingresos:[], gastos:[], equipo:[], subs:[], ventas:[], cuentas:[], movimientos:[] };
+let SELECTED_PERIOD = null; // For month/year filter
+let charts = {};
+const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+// ============================================================
+// INIT
+// ============================================================
+window.onload = () => {
+  const hoy = new Date().toISOString().split('T')[0];
+  ['is-fecha','gas-fecha','v-fecha','v-primer-venc'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = hoy;
+  });
+  fillPeriodSelects();
+  if (TOKEN) showApp();
+};
+
+function fillPeriodSelects() {
+  const now = new Date();
+  const opts = [];
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    opts.push({ label:`${MESES[d.getMonth()]} ${d.getFullYear()}`, mes:MESES[d.getMonth()], anio:d.getFullYear() });
+  }
+  opts.push({ label:'Todos los meses', mes:'', anio:'' });
+  ['period-select','ing-period','gas-period'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    sel.innerHTML = opts.map((o,i) => `<option value="${o.mes}|${o.anio}" ${i===0?'selected':''}>${o.label}</option>`).join('');
+  });
+}
+
+function fillVendedorSelects() {
+  const vendedores = CACHE.equipo.filter(m => m.activo);
+  const opts = '<option value="">— Sin vendedor —</option>' +
+    vendedores.map(m => `<option value="${m.nombre}">${m.nombre}</option>`).join('');
+  ['is-vendedor','v-vendedor','ei-vendedor'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = opts;
+  });
+}
+
+function fillMetodoPagoSelect() {
+  const cuentas = getCuentas();
+  const sel = document.getElementById('v-metodo-pago');
+  if (!sel) return;
+  
+  if (!cuentas.length) {
+    sel.innerHTML = `
+      <option value="">— Sin cuentas configuradas —</option>
+      <option value="Transferencia">Transferencia (genérica)</option>
+      <option value="Efectivo">Efectivo (genérica)</option>
+      <option value="PayPal">PayPal (genérica)</option>
+      <option value="Wise">Wise (genérica)</option>
+      <option value="Crypto">Crypto (genérica)</option>
+    `;
+    return;
+  }
+  
+  sel.innerHTML = '<option value="">— Seleccionar cuenta —</option>' +
+    cuentas.map(c => {
+      const label = `${c.emoji||'💵'} ${c.nombre} (${c.moneda})`;
+      return `<option value="${c.id}" data-nombre="${c.nombre}">${label}</option>`;
+    }).join('');
+}
+
+// ============================================================
+// AUTH
+// ============================================================
+async function login() {
+  const pw = document.getElementById('password-input').value.trim();
+  const err = document.getElementById('login-error');
+  if (!pw) return;
+  try {
+    const res = await api({ action:'login', password:pw }, false);
+    if (res.ok) {
+      TOKEN = res.token;
+      localStorage.setItem('dash_token', TOKEN);
+      showApp();
+    } else {
+      err.style.display = 'block';
+      err.textContent = 'Contraseña incorrecta';
+    }
+  } catch(e) {
+    err.style.display = 'block';
+    err.textContent = 'Error de conexión';
+  }
+}
+
+function logout() {
+  TOKEN = '';
+  localStorage.removeItem('dash_token');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+// ============================================================
+// LOAD ALL — una sola vez
+// ============================================================
+async function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('global-loader').style.display = 'flex';
+  try {
+    const res = await api({ action:'getDashboardAll' });
+    if (res.ok) {
+      CACHE.ingresos = res.data.ingresos || [];
+      CACHE.gastos   = res.data.gastos   || [];
+      CACHE.equipo   = res.data.equipo   || [];
+    }
+    // Subs desde localStorage
+    CACHE.subs = JSON.parse(localStorage.getItem('dash_subs') || '[]');
+  } catch(e) {}
+
+  // Load tesoreria from Sheet
+  await loadTesoreriaFromSheet();
+  
+  document.getElementById('global-loader').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  actualizarInfoTasa();
+  fillVendedorSelects();
+  renderDashboardFromCache();
+  renderIngresosFromCache();
+  renderGastosFromCache();
+  renderEquipo();
+  renderSubs();
+  renderCuotas();
+  renderTesoreria();
+}
+
+// ============================================================
+// API
+// ============================================================
+async function api(body, auth=true) {
+  if (auth) body.token = TOKEN;
+  const res = await fetch(API_URL, { method:'POST', body:JSON.stringify(body) });
+  return res.json();
+}
+
+function getPeriod(id) {
+  const sel = document.getElementById(id);
+  const [mes, anio] = (sel ? sel.value : '|').split('|');
+  return { mes, anio };
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+// ============================================================
+// SPARKLINE CHARTS FOR METRICS
+// ============================================================
+
+function generateSparkline(containerId, data, color) {
+  const container = document.getElementById(containerId);
+  if (!container || !data || data.length < 2) return;
+
+  const width = container.clientWidth || 200;
+  const height = 32;
+  const padding = 2;
+
+  const max = Math.max(...data);
+  const min = Math.min(...data);
+  const range = max - min || 1;
+
+  const xStep = width / (data.length - 1);
+  
+  const points = data.map((value, i) => {
+    const x = i * xStep;
+    const y = height - padding - ((value - min) / range) * (height - padding * 2);
+    return `${x},${y}`;
+  });
+
+  const linePath = `M ${points.join(' L ')}`;
+  
+  // Create gradient for area
+  const gradientId = `gradient-${containerId}`;
+  
+  // Build area path
+  const areaPoints = [...points];
+  areaPoints.push(`${width},${height}`);
+  areaPoints.push(`0,${height}`);
+  const areaPath = `M ${areaPoints.join(' L ')} Z`;
+
+  const svg = `
+    <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="${gradientId}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${color}" stop-opacity="0.3"/>
+          <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d="${areaPath}" fill="url(#${gradientId})"/>
+      <path d="${linePath}" fill="none" stroke="${color}" stroke-width="2"/>
+    </svg>
+  `;
+
+  container.innerHTML = svg;
+}
+
+function updateMetricChange(elementId, currentValue, previousValue) {
+  const el = document.getElementById(elementId);
+  if (!el || previousValue === 0) {
+    if (el) el.style.display = 'none';
+    return;
+  }
+
+  const change = ((currentValue - previousValue) / previousValue) * 100;
+  const isPositive = change >= 0;
+  
+  el.style.display = 'flex';
+  el.className = `metric-change ${isPositive ? 'positive' : 'negative'}`;
+  
+  const arrow = isPositive 
+    ? '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>'
+    : '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>';
+  
+  el.innerHTML = `${arrow}<span>${Math.abs(change).toFixed(1)}%</span>`;
+}
+
+function generateSparklineData(records, mes, anio) {
+  // Generate last 6 months of data for sparkline
+  const months = [];
+  const currentDate = new Date();
+  
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+    months.push({
+      mes: ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][d.getMonth()],
+      anio: d.getFullYear()
+    });
+  }
+
+  return months.map(m => {
+    return records
+      .filter(r => r.mes === m.mes && String(r.anio) === String(m.anio))
+      .reduce((sum, r) => sum + r.monto, 0);
+  });
+}
+
+
+function normalizeTextSafe(str) {
+  return String(str || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function isAdsExpense(g) {
+  const txt = normalizeTextSafe(`${g.categoria || ''} ${g.concepto || ''}`);
+  return [
+    'ads',
+    'meta ads',
+    'facebook ads',
+    'instagram ads',
+    'paid media',
+    'publicidad',
+    'pauta',
+    'campana',
+    'campaña',
+    'trafico',
+    'tráfico'
+  ].some(term => txt.includes(normalizeTextSafe(term)));
+}
+
+function calcularGastoAds(gastos) {
+  return (gastos || []).filter(isAdsExpense).reduce((s, g) => s + (parseFloat(g.monto) || 0), 0);
+}
+
+function calcularROAS(ingresosTotal, gastosTotal) {
+  return gastosTotal > 0 ? ingresosTotal / gastosTotal : null;
+}
+
+function fmtROAS(roas) {
+  return roas === null || !isFinite(roas) ? '—' : roas.toFixed(2) + 'x';
+}
+
+function parseDateSafe(fecha) {
+  if (!fecha) return null;
+
+  if (Object.prototype.toString.call(fecha) === '[object Date]' && !isNaN(fecha)) {
+    const d = new Date(fecha);
+    d.setHours(0,0,0,0);
+    return d;
+  }
+
+  const s = String(fecha).trim().split('T')[0];
+
+  // YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [y,m,d] = s.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    date.setHours(0,0,0,0);
+    return date;
+  }
+
+  // DD/MM/YYYY
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)) {
+    const [d,m,y] = s.split('/').map(Number);
+    const date = new Date(y, m - 1, d);
+    date.setHours(0,0,0,0);
+    return date;
+  }
+
+  const fallback = new Date(s);
+  if (isNaN(fallback)) return null;
+  fallback.setHours(0,0,0,0);
+  return fallback;
+}
+
+function mismoMesAnio(date, mes, anio) {
+  if (!date || !mes || !anio) return false;
+  return MESES[date.getMonth()] === mes && String(date.getFullYear()) === String(anio);
+}
+
+function renderDashboardFromCache() {
+  const mes = SELECTED_PERIOD ? SELECTED_PERIOD.mes : '';
+  const anio = SELECTED_PERIOD ? SELECTED_PERIOD.anio : '';
+  document.getElementById('dash-period').textContent = mes ? `${mes} ${anio}` : 'Todos los períodos';
+
+  let ingresos = CACHE.ingresos;
+  let gastos   = CACHE.gastos;
+  if (mes) {
+    ingresos = ingresos.filter(r => r.mes == mes && String(r.anio) == String(anio));
+    gastos   = gastos.filter(r => r.mes == mes && String(r.anio) == String(anio));
+  }
+
+  const totalIngresos = ingresos.reduce((s,r) => s + r.monto, 0);
+  const totalGastos   = gastos.reduce((s,r) => s + r.monto, 0);
+  const revenue       = totalIngresos - totalGastos;
+  const gastoAds      = calcularGastoAds(gastos);
+  const roas          = calcularROAS(totalIngresos, totalGastos);
+
+  document.getElementById('m-ingresos').textContent = fmt(totalIngresos);
+  document.getElementById('m-gastos').textContent   = fmt(totalGastos);
+  document.getElementById('m-revenue').textContent  = fmt(revenue);
+  document.getElementById('m-roi').textContent      = fmtROAS(roas);
+
+  // Generate sparklines
+  const ingresosData = generateSparklineData(CACHE.ingresos, mes, anio);
+  const gastosData = generateSparklineData(CACHE.gastos, mes, anio);
+  const revenueData = ingresosData.map((ing, i) => ing - (gastosData[i] || 0));
+
+  const monthsForSpark = [];
+  const nowSpark = new Date();
+  const countSpark = mes ? 6 : 6;
+  for (let i = countSpark - 1; i >= 0; i--) {
+    const d = new Date(nowSpark.getFullYear(), nowSpark.getMonth() - i, 1);
+    monthsForSpark.push({ mes: MESES[d.getMonth()], anio: d.getFullYear() });
+  }
+  const totalGastosData = monthsForSpark.map(m => CACHE.gastos
+    .filter(r => r.mes === m.mes && String(r.anio) === String(m.anio))
+    .reduce((s, r) => s + (parseFloat(r.monto) || 0), 0)
+  );
+  const roasData = ingresosData.map((ing, i) => totalGastosData[i] > 0 ? ing / totalGastosData[i] : 0);
+
+  generateSparkline('spark-ingresos', ingresosData, '#F7C948');
+  generateSparkline('spark-gastos', gastosData, '#E74C3C');
+  generateSparkline('spark-revenue', revenueData, '#2ECC71');
+  generateSparkline('spark-roi', roasData, '#2563EB');
+
+  // Calculate change vs previous period
+  const prevMonthIngresos = ingresosData[ingresosData.length - 2] || 0;
+  const prevMonthGastos = gastosData[gastosData.length - 2] || 0;
+  const prevMonthRevenue = revenueData[revenueData.length - 2] || 0;
+  const prevMonthRoas = roasData[roasData.length - 2] || 0;
+
+  updateMetricChange('change-ingresos', totalIngresos, prevMonthIngresos);
+  updateMetricChange('change-gastos', totalGastos, prevMonthGastos);
+  updateMetricChange('change-revenue', revenue, prevMonthRevenue);
+  updateMetricChange('change-roi', roas || 0, prevMonthRoas);
+
+  // Comisiones con lógica avanzada
+  const tbody = document.getElementById('tbody-comisiones');
+  const activos = CACHE.equipo.filter(m => m.activo);
+  let distribuido = 0;
+
+  const rows = activos.filter(m => m.tipo !== 'restante').map(m => {
+    let comision = 0, base = '', baseVal = '';
+    if (m.tipo === 'porcentaje') {
+      comision = totalIngresos * (m.valor/100);
+      base = `${m.valor}% de ingresos totales`;
+      baseVal = fmt(totalIngresos);
+    } else if (m.tipo === 'revenue_pct') {
+      comision = Math.max(0, revenue) * (m.valor/100);
+      base = `${m.valor}% del revenue neto`;
+      baseVal = fmt(Math.max(0, revenue));
+    } else if (m.tipo === 'vendedor') {
+      const susVentas = ingresos.filter(r => r.vendedor === m.nombre).reduce((s,r) => s+r.monto, 0);
+      comision = susVentas * (m.valor/100);
+      base = `${m.valor}% sobre lo cobrado de sus ventas`;
+      baseVal = fmt(susVentas);
+    } else if (m.tipo === 'vendedor_total') {
+      const ventasLocal = JSON.parse(localStorage.getItem('dash_ventas') || '[]');
+      const susTickets = ventasLocal.filter(v => v.vendedor === m.nombre && v.fecha).filter(v => {
+        const d = parseDateSafe(v.fecha);
+        return d && MESES[d.getMonth()] === mes && d.getFullYear() == anio;
+      }).reduce((s,v) => s+(v.total||0), 0);
+      comision = susTickets * (m.valor/100);
+      base = `${m.valor}% sobre ticket total de sus ventas`;
+      baseVal = fmt(susTickets);
+    } else if (m.tipo === 'fijo') {
+      comision = m.valor;
+      base = 'Monto fijo';
+      baseVal = '—';
+    }
+    distribuido += comision;
+    return `<tr><td><strong>${m.nombre}</strong></td><td><span class="tag tag-blue">${m.rol}</span></td><td>${base}</td><td style="color:var(--muted)">${baseVal}</td><td style="text-align:right"><strong style="color:var(--gold)">${fmt(comision)}</strong></td></tr>`;
+  });
+
+  const socios = activos.filter(m => m.tipo === 'restante');
+  socios.forEach(m => {
+    const restante = Math.max(0, revenue - distribuido);
+    rows.push(`<tr><td><strong>${m.nombre}</strong></td><td><span class="tag tag-purple">${m.rol}</span></td><td>Restante del revenue</td><td style="color:var(--muted)">${fmt(revenue)} - comisiones</td><td style="text-align:right"><strong style="color:var(--purple)">${fmt(restante)}</strong></td></tr>`);
+  });
+
+  tbody.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="5"><div class="empty">Sin equipo configurado</div></td></tr>';
+
+  const porCat = {};
+  gastos.forEach(g => { porCat[g.categoria] = (porCat[g.categoria]||0) + g.monto; });
+
+  // Sumar suscripciones: en su categoría propia Y en la categoría que tienen
+  const subs = JSON.parse(localStorage.getItem('dash_subs') || '[]');
+  const subsActivasCosto = subs.filter(s => s.costo > 0);
+  let totalSubs = 0;
+  subsActivasCosto.forEach(s => {
+    const costoMes = s.ciclo === 'Anual' ? +(s.costo/12).toFixed(2) : +s.costo;
+    porCat[s.categoria] = (porCat[s.categoria]||0) + costoMes;
+    porCat['Suscripciones'] = (porCat['Suscripciones']||0) + costoMes;
+    totalSubs += costoMes;
+  });
+
+  renderChartGastos(porCat, { totalIngresos, totalGastos, gastoAds, roas, periodo: mes ? `${mes} ${anio}` : 'Todos los períodos' });
+  renderChartDonut();
+  renderChartTimeline();
+  renderAlertas();
+}
+
+function renderAlertas() {
+  const container = document.getElementById('dash-alertas');
+  if (!container) return;
+
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const fin7 = new Date(hoy); fin7.setDate(fin7.getDate() + 7);
+  const fin30 = new Date(hoy); fin30.setDate(fin30.getDate() + 30);
+  const alertas = [];
+  const ventas = JSON.parse(localStorage.getItem('dash_ventas') || '[]');
+
+  const vencidas = [];
+  const proximas7 = [];
+  const proximas30 = [];
+
+  ventas.forEach(v => {
+    (v.cuotas || []).forEach(c => {
+      if (c.pagada || !c.vence) return;
+      const vd = parseDateSafe(c.vence);
+      if (!vd) return;
+
+      const item = {
+        cliente: v.cliente,
+        cuota: c.num,
+        total: v.nCuotas,
+        monto: c.monto,
+        vence: c.vence,
+        vendedor: v.vendedor
+      };
+
+      if (vd < hoy) vencidas.push(item);
+      else if (vd <= fin7) proximas7.push(item);
+      else if (vd <= fin30) proximas30.push(item);
+    });
+  });
+
+  if (vencidas.length > 0) {
+    const totalVencido = vencidas.reduce((s,c) => s + c.monto, 0);
+    alertas.push({
+      tipo: 'urgente', icono: '🔴',
+      titulo: `${vencidas.length} cuota${vencidas.length>1?'s':''} vencida${vencidas.length>1?'s':''} sin cobrar`,
+      desc: vencidas.slice(0,3).map(c => `${c.cliente} — Cuota ${c.cuota}/${c.total} (venció ${fmtFecha(c.vence)})`).join('\n') + (vencidas.length > 3 ? `\n+${vencidas.length-3} más` : ''),
+      monto: fmt(totalVencido) + ' pendiente'
+    });
+  }
+
+  if (proximas7.length > 0) {
+    const total7 = proximas7.reduce((s,c) => s + c.monto, 0);
+    alertas.push({
+      tipo: 'warning', icono: '⏰',
+      titulo: `${proximas7.length} cuota${proximas7.length>1?'s':''} vence${proximas7.length===1?'':'n'} esta semana`,
+      desc: proximas7.slice(0,5).map(c => `${c.cliente} — ${fmtFecha(c.vence)} · Cuota ${c.cuota}/${c.total}`).join('\n') + (proximas7.length > 5 ? `\n+${proximas7.length-5} más` : ''),
+      monto: fmt(total7) + ' por cobrar'
+    });
+  }
+
+  if (proximas30.length > 0) {
+    const total30 = proximas30.reduce((s,c) => s + c.monto, 0);
+    alertas.push({
+      tipo: 'info', icono: '📅',
+      titulo: `${proximas30.length} cuota${proximas30.length>1?'s':''} próxima${proximas30.length>1?'s':''} dentro de 30 días`,
+      desc: proximas30.slice(0,5).map(c => `${c.cliente} — ${fmtFecha(c.vence)}`).join('\n') + (proximas30.length > 5 ? `\n+${proximas30.length-5} más` : ''),
+      monto: fmt(total30) + ' esperado'
+    });
+  }
+
+  const subsVencen = CACHE.subs.filter(s => {
+    if (!s.vence || s.ciclo === 'gratis') return false;
+    const v = parseDateSafe(s.vence);
+    return v && v >= hoy && v <= fin7;
+  });
+  if (subsVencen.length > 0) {
+    alertas.push({
+      tipo: 'warning', icono: '💳',
+      titulo: `${subsVencen.length} suscripción${subsVencen.length>1?'es':''} vence${subsVencen.length===1?'':'n'} pronto`,
+      desc: subsVencen.map(s => `${s.nombre} — ${fmtFecha(s.vence)}`).join('\n'),
+      monto: fmt(subsVencen.reduce((sum,s) => sum + (s.costo||0), 0)) + ' mensual/anual'
+    });
+  }
+
+  if (!alertas.length) {
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="table-title" style="margin:22px 0 10px">Alertas del período</div>
+    <div class="alertas-grid">
+      ${alertas.map(a => `
+        <div class="alerta-card ${a.tipo}">
+          <div class="alerta-icon">${a.icono}</div>
+          <div>
+            <div class="alerta-titulo">${a.titulo}</div>
+            <div class="alerta-desc">${String(a.desc || '').replace(/\n/g,'<br>')}</div>
+            <div class="alerta-monto">${a.monto}</div>
+          </div>
         </div>
       `).join('')}
     </div>
@@ -1218,108 +2379,93 @@ function renderChartTimeline() {
   if(!container) return;
   
   var now = new Date();
-  var mesActual = now.getMonth();
-  var anioActual = now.getFullYear();
-  var mesAnterior = mesActual === 0 ? 11 : mesActual - 1;
-  var anioAnterior = mesActual === 0 ? anioActual - 1 : anioActual;
+  var mes = now.getMonth();
+  var anio = now.getFullYear();
+  var mes_ant = mes === 0 ? 11 : mes - 1;
+  var anio_ant = mes === 0 ? anio - 1 : anio;
   
-  var months_es = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-  var mesActualName = months_es[mesActual];
+  var meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  var mes_nombre = meses[mes];
   
-  var ingMesActual = {}, ingMesAnterior = {};
-  
+  var ing_act = {}, ing_ant = {};
   (CACHE.ingresos || []).forEach(function(x) {
     var d = new Date(x.fecha);
-    if(d.getMonth() === mesActual && d.getFullYear() === anioActual) {
+    if(d.getMonth() === mes && d.getFullYear() === anio) {
       var day = d.getDate();
-      ingMesActual[day] = (ingMesActual[day] || 0) + (parseFloat(x.monto) || 0);
+      ing_act[day] = (ing_act[day] || 0) + parseFloat(x.monto || 0);
     }
-    if(d.getMonth() === mesAnterior && d.getFullYear() === anioAnterior) {
+    if(d.getMonth() === mes_ant && d.getFullYear() === anio_ant) {
       var day = d.getDate();
-      ingMesAnterior[day] = (ingMesAnterior[day] || 0) + (parseFloat(x.monto) || 0);
+      ing_ant[day] = (ing_ant[day] || 0) + parseFloat(x.monto || 0);
     }
   });
   
-  var acumActual = 0, acumAnterior = 0;
-  var dataActual = [], dataAnterior = [];
+  var acum_act = 0, acum_ant = 0;
+  var arr_act = [], arr_ant = [];
   for(var i = 1; i <= 31; i++) {
-    acumActual += ingMesActual[i] || 0;
-    acumAnterior += ingMesAnterior[i] || 0;
-    dataActual.push(acumActual);
-    dataAnterior.push(acumAnterior);
+    acum_act += ing_act[i] || 0;
+    acum_ant += ing_ant[i] || 0;
+    arr_act.push(acum_act);
+    arr_ant.push(acum_ant);
   }
   
-  var totalActual = acumActual;
-  var totalAnterior = acumAnterior;
-  var mejora = totalAnterior > 0 ? ((totalActual - totalAnterior) / totalAnterior * 100) : 0;
+  var total_act = acum_act;
+  var total_ant = acum_ant;
+  var pct = total_ant > 0 ? ((total_act - total_ant) / total_ant * 100) : 0;
   
-  var html = '';
+  var html = '<div style="padding:16px">';
+  html += '<div style="display:flex;justify-content:space-between;margin-bottom:20px">';
+  html += '<div><div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:4px">CASH COLLECTED</div>';
+  html += '<div style="font-size:18px;font-weight:bold;color:#fff">' + mes_nombre + ' 2026</div>';
+  html += '<div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:4px">Acumulado</div></div>';
+  html += '<div style="text-align:right"><div style="font-size:24px;color:#00E396;font-weight:bold">$' + fmt(total_act) + '</div>';
+  html += '<div style="font-size:10px;color:rgba(255,255,255,0.5);margin-top:4px">TOTAL ACUMULADO</div></div></div>';
   
-  html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid rgba(255,255,255,0.1)">';
-  html += '<div>';
-  html += '<div style="font-size:11px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Cash Collected</div>';
-  html += '<div style="font-size:20px;color:#fff;font-weight:bold">' + mesActualName + ' 2026</div>';
-  html += '<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:6px">Acumulado</div>';
-  html += '</div>';
-  html += '<div style="text-align:right">';
-  html += '<div style="font-size:28px;color:#00E396;font-weight:bold">$' + fmt(totalActual) + '</div>';
-  html += '<div style="font-size:10px;color:rgba(255,255,255,0.5);margin-top:6px;text-transform:uppercase;letter-spacing:0.5px">Total Acumulado</div>';
-  html += '</div>';
-  html += '</div>';
+  html += '<div style="display:flex;justify-content:space-between;margin-bottom:16px;font-size:12px">';
+  html += '<div style="color:' + (pct >= 0 ? '#00E396' : '#FF4560') + '">↑ ' + pct.toFixed(1) + '% vs Mes Anterior</div>';
+  html += '<div style="color:rgba(255,255,255,0.4)">Mes anterior: $' + fmt(total_ant) + '</div></div>';
   
-  html += '<div style="display:flex;justify-content:space-between;margin-bottom:20px;font-size:12px">';
-  var color_mejora = mejora >= 0 ? '#00E396' : '#FF4560';
-  html += '<div style="color:' + color_mejora + '">↑ ' + mejora.toFixed(1) + '% vs Mes Anterior</div>';
-  html += '<div style="color:rgba(255,255,255,0.4)">Mes anterior: $' + fmt(totalAnterior) + '</div>';
-  html += '</div>';
+  var w = 800, h = 280, ml = 50, mr = 20, mt = 20, mb = 40;
+  var iw = w - ml - mr, ih = h - mt - mb;
+  var maxv = Math.max(total_act, total_ant) * 1.05 || 1000;
+  var sy = ih / maxv, sx = iw / 30;
   
-  var w = 780, h = 280;
-  var m = {top: 20, right: 20, bottom: 40, left: 50};
-  var iw = w - m.left - m.right;
-  var ih = h - m.top - m.bottom;
+  html += '<svg width="100%" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="xMidYMid meet" style="background:transparent">';
   
-  var maxV = Math.max(totalActual, totalAnterior) * 1.05 || 1000;
-  var sy = ih / maxV;
-  var sx = iw / 30;
-  
-  var svg = '<svg width="100%" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">';
-  
-  var pathA = 'M';
+  var path_ant = "M " + ml + " " + (mt + ih);
   for(var i = 0; i < 31; i++) {
-    var x = m.left + i * sx;
-    var y = m.top + ih - (dataAnterior[i] || 0) * sy;
-    pathA += (i === 0 ? ' ' : ' L ') + x + ' ' + y;
+    var x = ml + i * sx;
+    var y = mt + ih - (arr_ant[i] || 0) * sy;
+    path_ant += " L " + x + " " + y;
   }
-  svg += '<path d="' + pathA + '" stroke="rgba(255,255,255,0.15)" stroke-width="2" fill="none" stroke-dasharray="4,4"/>';
+  html += '<path d="' + path_ant + '" stroke="rgba(255,255,255,0.15)" stroke-width="2" fill="none" stroke-dasharray="4,4"/>';
   
-  var pathC = 'M';
+  var path_act = "M " + ml + " " + (mt + ih);
   for(var i = 0; i < 31; i++) {
-    var x = m.left + i * sx;
-    var y = m.top + ih - (dataActual[i] || 0) * sy;
-    pathC += (i === 0 ? ' ' : ' L ') + x + ' ' + y;
+    var x = ml + i * sx;
+    var y = mt + ih - (arr_act[i] || 0) * sy;
+    path_act += " L " + x + " " + y;
   }
-  svg += '<path d="' + pathC + '" stroke="#00E396" stroke-width="3" fill="none"/>';
+  html += '<path d="' + path_act + '" stroke="#00E396" stroke-width="3" fill="none"/>';
   
-  var area = pathC + ' L ' + (m.left + 30*sx) + ' ' + (m.top + ih) + ' L ' + m.left + ' ' + (m.top + ih) + ' Z';
-  svg += '<path d="' + area + '" fill="rgba(0,227,150,0.12)"/>';
+  var area = path_act + " L " + (ml + 30*sx) + " " + (mt + ih) + " L " + ml + " " + (mt + ih) + " Z";
+  html += '<path d="' + area + '" fill="rgba(0,227,150,0.12)"/>';
   
-  svg += '<line x1="' + m.left + '" y1="' + (m.top + ih) + '" x2="' + (w - m.right) + '" y2="' + (m.top + ih) + '" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>';
+  html += '<line x1="' + ml + '" y1="' + (mt + ih) + '" x2="' + (w - mr) + '" y2="' + (mt + ih) + '" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>';
   
   for(var i = 0; i <= 30; i += 5) {
-    var x = m.left + i * sx;
-    svg += '<text x="' + x + '" y="' + (m.top + ih + 25) + '" fill="rgba(255,255,255,0.4)" font-size="11" text-anchor="middle">' + (i+1) + '</text>';
+    var x = ml + i * sx;
+    html += '<text x="' + x + '" y="' + (mt + ih + 25) + '" fill="rgba(255,255,255,0.4)" font-size="10" text-anchor="middle">' + (i+1) + '</text>';
   }
   
-  svg += '<g transform="translate(' + m.left + ',10)">';
-  svg += '<line x1="0" y1="0" x2="12" y2="0" stroke="#00E396" stroke-width="2.5"/>';
-  svg += '<text x="18" y="4" fill="rgba(255,255,255,0.6)" font-size="11">Mes Actual</text>';
-  svg += '<line x1="140" y1="0" x2="152" y2="0" stroke="rgba(255,255,255,0.15)" stroke-width="2" stroke-dasharray="4,4"/>';
-  svg += '<text x="158" y="4" fill="rgba(255,255,255,0.6)" font-size="11">Mes Anterior</text>';
-  svg += '</g>';
+  html += '<line x1="' + ml + '" y1="' + mt + '" x2="' + ml + '" y2="' + (mt + ih) + '" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>';
+  html += '<g><line x1="' + ml + '" y1="' + mt + '" x2="10" y2="' + mt + '" stroke="#00E396" stroke-width="2"/>';
+  html += '<text x="' + (ml + 18) + '" y="' + (mt + 4) + '" fill="rgba(255,255,255,0.6)" font-size="11">Mes Actual</text>';
+  html += '<line x1="' + (ml + 140) + '" y1="' + mt + '" x2="' + (ml + 152) + '" y2="' + mt + '" stroke="rgba(255,255,255,0.15)" stroke-width="2" stroke-dasharray="4,4"/>';
+  html += '<text x="' + (ml + 160) + '" y="' + (mt + 4) + '" fill="rgba(255,255,255,0.6)" font-size="11">Mes Anterior</text></g>';
   
-  svg += '</svg>';
+  html += '</svg></div>';
   
-  html += svg;
   container.innerHTML = html;
 }
 
@@ -2658,7 +3804,215 @@ function renderTesoreria() {
   list.innerHTML = cuentas.length ? cuentas.map(c => {
     const saldo = saldos[c.id] || 0;
     const color = saldo >= 0 ? 'var(--green)' : 'var(--red)';
-    return ``).join('')}
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">${c.emoji||'💵'}</span>
+        <div>
+          <div style="font-size:13px;font-weight:500">${c.nombre}</div>
+          <div style="display:flex;gap:6px;margin-top:3px">
+            <span class="tag ${tipoColors[c.tipo]||'tag-gray'}" style="font-size:9px">${c.tipo}</span>
+            <span class="tag tag-gray" style="font-size:9px">${c.moneda}</span>
+          </div>
+          ${c.desc?`<div style="font-size:10px;color:var(--muted);margin-top:2px">${c.desc}</div>`:''}
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:16px;font-weight:600;color:${color}">${c.moneda==='ARS'?'$':'$'}${Math.abs(saldo).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+        <button onclick="deleteCuenta('${c.id}')" style="font-size:10px;color:var(--muted);background:none;border:none;cursor:pointer;margin-top:2px">Eliminar</button>
+      </div>
+    </div>`;
+  }).join('') : '<div class="empty" style="padding:20px">Agregá tu primera cuenta</div>';
+
+  // Gráfico
+  if (cuentas.length) {
+    const labels = cuentas.map(c => c.nombre);
+    const data   = cuentas.map(c => Math.max(0, saldos[c.id]||0));
+    const bgColors = ['#F7C948','#2563EB','#2ECC71','#8B5CF6','#F97316','#E74C3C','#1ABC9C'];
+    if (charts.tesoreria) charts.tesoreria.destroy();
+    charts.tesoreria = new Chart(document.getElementById('chart-tesoreria'), {
+      type:'doughnut',
+      data:{ labels, datasets:[{ data, backgroundColor:labels.map((_,i)=>bgColors[i%bgColors.length]), borderColor:'#161616', borderWidth:3, hoverOffset:6 }] },
+      options:{ responsive:true, maintainAspectRatio:false, cutout:'60%',
+        plugins:{ legend:{ position:'bottom', labels:{color:'rgba(255,255,255,0.5)',font:{size:11},padding:12,usePointStyle:true,pointStyleWidth:8} },
+          tooltip:{callbacks:{label:ctx=>' $'+ctx.raw.toLocaleString('es-AR')}}
+        }
+      }
+    });
+  }
+
+  // Movimientos
+  const tbody = document.getElementById('tbody-movimientos');
+  if (!movs.length) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty">Sin movimientos registrados</div></td></tr>';
+  } else {
+    const tipoTag = { entrada:'tag-green', salida:'tag-red', transferencia:'tag-blue' };
+    const tipoLabel = { entrada:'↑ Entrada', salida:'↓ Salida', transferencia:'⇄ Transfer.' };
+    tbody.innerHTML = [...movs].reverse().map(m => {
+      const ctaNombre = cuentas.find(c=>c.id===m.cuentaId)?.nombre || '—';
+      const montoColor = m.tipo==='entrada' ? 'var(--green)' : m.tipo==='salida' ? 'var(--red)' : 'var(--accent)';
+      return `<tr>
+        <td style="color:var(--muted)">${fmtFecha(m.fecha)}</td>
+        <td>${m.desc||'—'}</td>
+        <td style="font-size:12px">${ctaNombre}${m.tipo==='transferencia'?` → ${cuentas.find(c=>c.id===m.cuentaDestId)?.nombre||'?'}`:''}</td>
+        <td><span class="tag ${tipoTag[m.tipo]||'tag-gray'}">${tipoLabel[m.tipo]||m.tipo}</span></td>
+        <td style="text-align:right;font-weight:600;color:${montoColor}">${m.tipo==='salida'?'-':''}${fmt(m.monto)}</td>
+        <td><button class="btn-icon" onclick="deleteMovimiento('${m.id}')">✕</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Fill cuenta selects in movimiento modal
+  fillCuentaSelects(cuentas);
+}
+
+function fillCuentaSelects(cuentas) {
+  const opts = cuentas.length
+    ? cuentas.map(c => `<option value="${c.id}">${c.emoji||'💵'} ${c.nombre}</option>`).join('')
+    : '<option value="">Sin cuentas</option>';
+  ['mov-cuenta','mov-cuenta-dest'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = opts;
+  });
+}
+
+function toggleMovTipo() {
+  const tipo = document.getElementById('mov-tipo').value;
+  document.getElementById('mov-cuenta-dest-wrap').style.display = tipo==='transferencia' ? 'block' : 'none';
+}
+
+async function saveCuenta() {
+  const nombre = document.getElementById('cta-nombre').value.trim();
+  if (!nombre) { showToast('Ingresá el nombre','err'); return; }
+  const c = {
+    nombre,
+    emoji:  document.getElementById('cta-emoji').value.trim() || '💵',
+    tipo:   document.getElementById('cta-tipo').value,
+    moneda: document.getElementById('cta-moneda').value,
+    saldoInicial: parseFloat(document.getElementById('cta-saldo').value) || 0,
+    desc:   document.getElementById('cta-desc').value.trim()
+  };
+  try {
+    const res = await api({ action: 'addCuenta', ...c });
+    console.log('addCuenta response:', res);
+    
+    if (res && res.ok && res.id) {
+      CACHE.cuentas.push({ ...c, id: res.id });
+      saveCuentasLocal(CACHE.cuentas);
+      renderTesoreria();
+      showToast('Cuenta agregada ✓','ok');
+      closeModal('cuenta');
+      clearForm(['cta-nombre','cta-emoji','cta-saldo','cta-desc']);
+    } else {
+      // Sheet no respondió OK - guardar localmente
+      console.warn('Sheet no OK:', res);
+      const id = makeLocalId('CTA');
+      CACHE.cuentas.push({ ...c, id });
+      saveCuentasLocal(CACHE.cuentas);
+      renderTesoreria();
+      showToast('Cuenta guardada localmente (Sheet: ' + (res.error || 'sin ok') + ')','ok');
+      closeModal('cuenta');
+      clearForm(['cta-nombre','cta-emoji','cta-saldo','cta-desc']);
+    }
+  } catch(e) {
+    console.error('Error guardando cuenta:', e);
+    const id = makeLocalId('CTA');
+    CACHE.cuentas.push({ ...c, id });
+    saveCuentasLocal(CACHE.cuentas);
+    renderTesoreria();
+    showToast('Cuenta guardada localmente (error de red)','ok');
+    closeModal('cuenta');
+    clearForm(['cta-nombre','cta-emoji','cta-saldo','cta-desc']);
+  }
+}
+
+async function deleteCuenta(id) {
+  if (!confirm('¿Eliminar esta cuenta? Se perderán los movimientos asociados.')) return;
+  try {
+    const res = await api({ action: 'deleteCuenta', id });
+    if (res.ok) {
+      CACHE.cuentas = CACHE.cuentas.filter(c => c.id !== id);
+      CACHE.movimientos = CACHE.movimientos.filter(m => m.cuentaId !== id && m.cuentaDestId !== id);
+      renderTesoreria();
+      showToast('Cuenta eliminada','ok');
+    }
+  } catch(e) {
+    showToast('Error al eliminar','err');
+  }
+}
+
+async function saveMovimiento() {
+  const tipo       = document.getElementById('mov-tipo').value;
+  const fecha      = document.getElementById('mov-fecha').value;
+  const cuentaId   = document.getElementById('mov-cuenta').value;
+  const cuentaDestId = document.getElementById('mov-cuenta-dest').value;
+  const desc       = document.getElementById('mov-desc').value.trim();
+  const monto      = parseFloat(document.getElementById('mov-monto').value);
+  if (!monto || !cuentaId) { showToast('Completá los campos requeridos','err'); return; }
+  if (tipo==='transferencia' && cuentaId===cuentaDestId) { showToast('Las cuentas deben ser diferentes','err'); return; }
+  try {
+    const res = await api({ action: 'addMovimiento', tipo, fecha, cuentaId, cuentaDestId, desc, monto });
+    if (res.ok) {
+      CACHE.movimientos.push({ id: res.id, tipo, fecha, cuentaId, cuentaDestId, desc, monto });
+      renderTesoreria();
+      showToast('Movimiento registrado ✓','ok');
+      closeModal('movimiento');
+      clearForm(['mov-desc','mov-monto']);
+    }
+  } catch(e) {
+    showToast('Error al guardar','err');
+  }
+}
+
+async function deleteMovimiento(id) {
+  if (!confirm('¿Eliminar este movimiento?')) return;
+  try {
+    const res = await api({ action: 'deleteMovimiento', id });
+    if (res.ok) {
+      CACHE.movimientos = CACHE.movimientos.filter(m => m.id !== id);
+      renderTesoreria();
+      showToast('Eliminado','ok');
+    }
+  } catch(e) {
+    showToast('Error al eliminar','err');
+  }
+}
+
+// ============================================================
+// CONFIGURACIONES
+// ============================================================
+const LOCAL_KEYS = ['dash_ventas','dash_subs','tesoreria_cuentas','tesoreria_movs','ars_usd_tasa','ars_usd_tasa_fecha','dash_token'];
+
+function renderConfigInfo() {
+  actualizarInfoTasa();
+  const input = document.getElementById('cfg-tasa');
+  if (input) input.value = getTasa();
+  const info = document.getElementById('cfg-info');
+  if (!info) return;
+  const ventas = JSON.parse(localStorage.getItem('dash_ventas')||'[]');
+  const subs   = JSON.parse(localStorage.getItem('dash_subs')||'[]');
+  const ctas   = JSON.parse(localStorage.getItem('tesoreria_cuentas')||'[]');
+  const movs   = JSON.parse(localStorage.getItem('tesoreria_movs')||'[]');
+  const cuotas = ventas.reduce((s,v)=>s+v.cuotas.length,0);
+  const size   = LOCAL_KEYS.reduce((s,k)=>{
+    const v = localStorage.getItem(k)||'';
+    return s + new Blob([v]).size;
+  },0);
+  info.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px">
+      ${[
+        ['🧾 Ventas registradas', ventas.length],
+        ['📋 Cuotas totales', cuotas],
+        ['🔗 Suscripciones', subs.length],
+        ['🏦 Cuentas tesorería', ctas.length],
+        ['↔ Movimientos', movs.length],
+        ['💾 Datos locales', (size/1024).toFixed(1)+' KB'],
+        ['💱 Tasa ARS/USD', '1 USD = $'+getTasa().toLocaleString('es-AR')],
+        ['📊 Ingresos (Sheet)', CACHE.ingresos.length+' registros'],
+      ].map(([label,val])=>`
+        <div style="background:var(--surface);border-radius:8px;padding:12px 14px">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">${label}</div>
+          <div style="font-size:18px;font-weight:600;color:var(--text)">${val}</div>
+        </div>`).join('')}
     </div>`;
 }
 
@@ -3198,7 +4552,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const customDateBtn = document.getElementById('custom-date-btn');
   
   const rangeLabels = {
-    '6m': 'Mayo 2026',
+    '6m': 'Últimos 6 meses',
     '1y': 'Último año',
     '2y': 'Últimos 2 años',
     'all': 'Todo el período'
@@ -3561,52 +4915,31 @@ function initMonthSelector() {
   });
 }
 
-
-// Toast de carga
-function showLoadingToast(message) {
-  message = message || 'Guardando...';
-  var existing = document.getElementById('loading-toast');
-  if(existing) existing.remove();
-  
-  var toast = document.createElement('div');
-  toast.className = 'toast';
-  toast.id = 'loading-toast';
-  toast.innerHTML = '<div class="spinner"></div><span>' + message + '</span>';
-  document.body.appendChild(toast);
+function showLoadingToast(msg) {
+  var t = document.getElementById('loading-toast');
+  if(t) t.remove();
+  t = document.createElement('div');
+  t.id = 'loading-toast';
+  t.className = 'toast';
+  t.innerHTML = '<div class="spinner"></div>' + (msg || 'Guardando...');
+  document.body.appendChild(t);
 }
-
 function hideLoadingToast() {
-  var toast = document.getElementById('loading-toast');
-  if(toast) {
-    setTimeout(function() { toast.remove(); }, 500);
-  }
+  var t = document.getElementById('loading-toast');
+  if(t) setTimeout(function() { t.remove(); }, 300);
 }
-
-// Envolver función de API
 if(typeof window.api === 'function') {
-  var originalApi = window.api;
-  window.api = function(data) {
-    showLoadingToast('Guardando...');
+  var _api = window.api;
+  window.api = function(d) {
+    showLoadingToast();
     try {
-      var result = originalApi(data);
-      if(result && typeof result.then === 'function') {
-        return result.then(function(res) {
-          hideLoadingToast();
-          return res;
-        }).catch(function(err) {
-          hideLoadingToast();
-          throw err;
-        });
-      }
+      var r = _api(d);
+      if(r && r.then) return r.then(function(x) { hideLoadingToast(); return x; }).catch(function(e) { hideLoadingToast(); throw e; });
       hideLoadingToast();
-      return result;
-    } catch(e) {
-      hideLoadingToast();
-      throw e;
-    }
+      return r;
+    } catch(e) { hideLoadingToast(); throw e; }
   };
 }
-
 </script>
 </body>
 </html>
