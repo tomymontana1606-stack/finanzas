@@ -2125,7 +2125,13 @@ function renderDashboardFromCache() {
 
   let ingresos = CACHE.ingresos;
   let gastos   = CACHE.gastos;
-  if (mes) {
+  if (SELECTED_PERIOD && SELECTED_PERIOD.days !== undefined) {
+    // Filtro por rango de días
+    const now = new Date();
+    const start = SELECTED_PERIOD.days === 'all' ? new Date(2020,0,1) : new Date(now.getTime() - SELECTED_PERIOD.days * 24 * 3600 * 1000);
+    ingresos = ingresos.filter(r => new Date(r.fecha) >= start);
+    gastos   = gastos.filter(r => new Date(r.fecha) >= start);
+  } else if (mes) {
     ingresos = ingresos.filter(r => r.mes == mes && String(r.anio) == String(anio));
     gastos   = gastos.filter(r => r.mes == mes && String(r.anio) == String(anio));
   }
@@ -4744,12 +4750,12 @@ function initMonthSelector() {
     el.addEventListener('click', function(e) {
       e.stopPropagation();
       const days = this.dataset.days;
-      const now = new Date();
-      const start = days === 'all' ? new Date(2020,0,1) : new Date(now.getTime() - days * 24 * 3600 * 1000);
       dropdown.style.display = 'none';
       btn.classList.remove('open');
       if(selectedText) selectedText.textContent = this.textContent.trim();
-      renderChartTimeline();
+      // Actualizar SELECTED_PERIOD con rango de días
+      SELECTED_PERIOD = { days: days === 'all' ? 'all' : parseInt(days) };
+      renderDashboardFromCache();
     });
   });
 
