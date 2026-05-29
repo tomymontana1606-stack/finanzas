@@ -3174,9 +3174,14 @@ function renderSubs() {
   const grid = document.getElementById('subs-grid');
 
   const costoMensual = subs.reduce((s,sub) => {
-    if (sub.ciclo==='mensual') return s + (parseFloat(sub.costo)||0);
-    if (sub.ciclo==='anual')   return s + (parseFloat(sub.costo)||0)/12;
-    return s;
+    const c = parseFloat(sub.costo) || 0;
+    const ciclo = (sub.ciclo || '').toLowerCase().trim();
+    if (ciclo === 'mensual' || ciclo === 'monthly' || ciclo === 'mes') return s + c;
+    if (ciclo === 'anual' || ciclo === 'annual' || ciclo === 'año')    return s + c/12;
+    if (ciclo === 'semanal' || ciclo === 'weekly')  return s + c*4;
+    if (ciclo === 'diario' || ciclo === 'daily')    return s + c*30;
+    if (ciclo === 'pay/uso' || ciclo === 'variable') return s + c;
+    return s + c; // incluir cualquier otro ciclo con el costo tal cual
   }, 0);
   const gratis    = subs.filter(s => s.plan==='gratuito'||s.ciclo==='gratis').length;
   const prontoExp = subs.filter(s => {
@@ -3203,7 +3208,8 @@ function renderSubs() {
     if (s.vence) {
       const v = new Date(s.vence); v.setHours(0,0,0,0);
       const diff = Math.round((v-hoy)/86400000);
-      if (diff < 0)       { diasClass='dias-danger'; diasText='Expirada';         cardClass='expirada'; }
+      if (isNaN(diff))    { diasClass='dias-gray';   diasText='Sin vencimiento';   cardClass='activa'; }
+      else if (diff < 0)  { diasClass='dias-danger'; diasText='Expirada';         cardClass='expirada'; }
       else if (diff <= 7) { diasClass='dias-warn';   diasText=`Vence en ${diff}d`; cardClass='expira-pronto'; }
       else if (diff <= 30){ diasClass='dias-warn';   diasText=`${diff} días`;      }
       else                { diasClass='dias-ok';     diasText=`${diff} días`;      cardClass='activa'; }
