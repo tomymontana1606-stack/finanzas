@@ -946,10 +946,10 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
               <div style="font-size:11px;color:var(--muted)" id="timeline-range-label">Últimos 6 meses</div>
             </div>
             <div style="display:flex;gap:8px;align-items:center">
-              <button class="filter-btn active" data-range="6m">6M</button>
-              <button class="filter-btn" data-range="1y">1Y</button>
-              <button class="filter-btn" data-range="2y">2Y</button>
-              <button class="filter-btn" data-range="all">Todo</button>
+              
+              
+              
+              
               <button class="filter-btn" id="custom-date-btn" data-range="custom">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="margin-right: 4px;">
                   <path fill-rule="evenodd" clip-rule="evenodd" d="M5.5 0.5V1.25V2H10.5V1.25V0.5H12V1.25V2H14H15.5V3.5V13.5C15.5 14.8807 14.3807 16 13 16H3C1.61929 16 0.5 14.8807 0.5 13.5V3.5V2H2H4V1.25V0.5H5.5ZM2 3.5H14V6H2V3.5ZM2 7.5V13.5C2 14.0523 2.44772 14.5 3 14.5H13C13.5523 14.5 14 14.0523 14 13.5V7.5H2Z"/>
@@ -5027,6 +5027,11 @@ function initMonthSelector() {
 }
 
 
+
+}
+
+
+
 // Generar dropdown de meses 2026 + filtros de días
 function initMonthDropdownDynamic() {
   var dropdown = document.getElementById('month-dropdown');
@@ -5062,7 +5067,7 @@ function initMonthDropdownDynamic() {
   label.textContent = 'Rango de días';
   dropdown.appendChild(label);
   
-  // Botones de días
+  // Botones de días - CONECTADOS AL GRÁFICO
   var days_arr = [7, 15, 30, 60, 90];
   days_arr.forEach(function(d) {
     var opt = document.createElement('div');
@@ -5070,11 +5075,39 @@ function initMonthDropdownDynamic() {
     opt.textContent = d + ' días';
     opt.onmouseover = function() { this.style.background = 'rgba(37,99,235,0.2)'; };
     opt.onmouseout = function() { this.style.background = 'transparent'; };
-    opt.onclick = function() { 
-      document.getElementById('month-dropdown').style.display = 'none';
-    };
+    opt.onclick = (function(days) {
+      return function() {
+        // ACTUALIZAR GRÁFICO CON EL RANGO SELECCIONADO
+        var now = new Date();
+        var start = new Date(now.getTime() - days * 24 * 3600 * 1000);
+        
+        // Llamar a la función que actualiza el gráfico
+        if(typeof renderChartTimelineCustom === 'function') {
+          renderChartTimelineCustom(start, now);
+        }
+        
+        document.getElementById('month-dropdown').style.display = 'none';
+      };
+    })(d);
     dropdown.appendChild(opt);
   });
+  
+  // Agregar botón "Total"
+  var opt_total = document.createElement('div');
+  opt_total.style.cssText = 'padding:12px;cursor:pointer;border-radius:6px;transition:all 0.2s;color:rgba(255,255,255,0.8)';
+  opt_total.textContent = 'Total';
+  opt_total.onmouseover = function() { this.style.background = 'rgba(37,99,235,0.2)'; };
+  opt_total.onmouseout = function() { this.style.background = 'transparent'; };
+  opt_total.onclick = function() {
+    // MOSTRAR TODO EL HISTÓRICO
+    var start = new Date(2020, 0, 1);
+    var now = new Date();
+    if(typeof renderChartTimelineCustom === 'function') {
+      renderChartTimelineCustom(start, now);
+    }
+    document.getElementById('month-dropdown').style.display = 'none';
+  };
+  dropdown.appendChild(opt_total);
 }
 
 // Ejecutar al cargar
