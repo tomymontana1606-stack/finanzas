@@ -965,49 +965,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
               <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,0.5)"><span style="width:24px;height:2px;background:#00E396;display:inline-block;border-radius:2px"></span>Revenue</span>
             </div>
           </div>
-          <div id="chart-timeline-container" style="position:relative;height:260px" role="img" aria-label="Línea de tiempo ingresos vs gastos"></div>
-        </div>
-      </div>
-
-      <!-- Date Range Calendar Modal -->
-      <div id="date-range-modal" class="date-modal" style="display:none;">
-        <div class="date-modal-overlay"></div>
-        <div class="date-modal-content">
-          <div class="date-calendar-container">
-            <div class="calendar-header">
-              <button class="calendar-nav-btn" id="prev-month-btn">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <path d="M10.5 14.0607L9.96966 13.5303L5.14644 8.7071C4.75592 8.31658 4.75592 7.68341 5.14644 7.29289L9.96966 2.46966L10.5 1.93933L11.5607 2.99999L11.0303 3.53032L6.56065 7.99999L11.0303 12.4697L11.5607 13L10.5 14.0607Z"/>
-                </svg>
-              </button>
-              <div class="calendar-month-year" id="calendar-month-year">June 2025</div>
-              <button class="calendar-nav-btn" id="next-month-btn">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <path d="M5.50001 1.93933L6.03034 2.46966L10.8536 7.29288C11.2441 7.68341 11.2441 8.31657 10.8536 8.7071L6.03034 13.5303L5.50001 14.0607L4.43935 13L4.96968 12.4697L9.43935 7.99999L4.96968 3.53032L4.43935 2.99999L5.50001 1.93933Z"/>
-                </svg>
-              </button>
-            </div>
-            <div class="calendar-grid">
-              <div class="calendar-weekdays">
-                <div>Su</div>
-                <div>Mo</div>
-                <div>Tu</div>
-                <div>We</div>
-                <div>Th</div>
-                <div>Fr</div>
-                <div>Sa</div>
-              </div>
-              <div class="calendar-days" id="calendar-days">
-                <!-- Days populated by JS -->
-              </div>
-            </div>
-            <div class="calendar-footer">
-              <button class="calendar-cancel-btn" id="calendar-cancel-btn">Cancelar</button>
-              <button class="calendar-apply-btn" id="calendar-apply-btn">Aplicar</button>
-            </div>
-          </div>
-        </div>
-      </div>
+          
 
       <div class="charts-row" style="margin-bottom:20px">
         <div class="chart-card"><div class="chart-title">Gastos por categoría</div><div id="chart-gastos-container" style="position:relative;height:200px" role="img" aria-label="Gastos por categoría"></div></div>
@@ -5220,6 +5178,131 @@ function renderIngresosMesComparacion() {
 
 // Llamar al cargar
 document.addEventListener('DOMContentLoaded', renderIngresosMesComparacion);
+
+
+
+function renderCashCollectedChart() {
+  var container = document.getElementById('chart-timeline-container');
+  if(!container) return;
+  
+  var now = new Date();
+  var mesActual = now.getMonth();
+  var anioActual = now.getFullYear();
+  var mesAnterior = mesActual === 0 ? 11 : mesActual - 1;
+  var anioAnterior = mesActual === 0 ? anioActual - 1 : anioActual;
+  
+  var months_es = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  var mesActualName = months_es[mesActual];
+  
+  // Agrupar ingresos por día
+  var ingMesActual = {};
+  var ingMesAnterior = {};
+  
+  (CACHE.ingresos || []).forEach(function(x) {
+    var d = new Date(x.fecha);
+    if(d.getMonth() === mesActual && d.getFullYear() === anioActual) {
+      var day = d.getDate();
+      ingMesActual[day] = (ingMesActual[day] || 0) + (parseFloat(x.monto) || 0);
+    }
+    if(d.getMonth() === mesAnterior && d.getFullYear() === anioAnterior) {
+      var day = d.getDate();
+      ingMesAnterior[day] = (ingMesAnterior[day] || 0) + (parseFloat(x.monto) || 0);
+    }
+  });
+  
+  // Datos acumulados
+  var acumActual = 0, acumAnterior = 0;
+  var dataActual = [], dataAnterior = [];
+  for(var i = 1; i <= 31; i++) {
+    acumActual += ingMesActual[i] || 0;
+    acumAnterior += ingMesAnterior[i] || 0;
+    dataActual.push(acumActual);
+    dataAnterior.push(acumAnterior);
+  }
+  
+  var totalActual = acumActual;
+  var totalAnterior = acumAnterior;
+  var mejora = totalAnterior > 0 ? ((totalActual - totalAnterior) / totalAnterior * 100) : 0;
+  
+  // HTML
+  var html = '<div style="padding:0">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding:0 12px">';
+  html += '<div>';
+  html += '<div style="font-size:11px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:1px">Cash Collected</div>';
+  html += '<div style="font-size:24px;color:#fff;font-weight:bold;margin-top:4px">' + mesActualName + ' 2026</div>';
+  html += '<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:8px">MTD</div>';
+  html += '</div>';
+  html += '<div style="text-align:right">';
+  html += '<div style="font-size:28px;color:#00E396;font-weight:bold">$' + fmt(totalActual) + '</div>';
+  html += '<div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:8px">TOTAL ACUMULADO</div>';
+  html += '</div>';
+  html += '</div>';
+  
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:0 12px;margin-bottom:20px;font-size:12px">';
+  var mejora_color = mejora >= 0 ? '#00E396' : '#FF4560';
+  html += '<div style="color:' + mejora_color + '">↑ ' + mejora.toFixed(1) + '% vs Mes Anterior</div>';
+  html += '<div style="color:rgba(255,255,255,0.5)">Mes anterior hoy: $' + fmt(totalAnterior) + '</div>';
+  html += '</div>';
+  
+  // SVG Gráfico
+  var width = 800, height = 280;
+  var margin = {top: 20, right: 20, bottom: 40, left: 50};
+  var innerWidth = width - margin.left - margin.right;
+  var innerHeight = height - margin.top - margin.bottom;
+  
+  var maxVal = Math.max(totalActual, totalAnterior) * 1.05;
+  var scaleY = innerHeight / maxVal;
+  var scaleX = innerWidth / 30;
+  
+  var svg = '<svg width="100%" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '" preserveAspectRatio="none" style="margin-top:10px">';
+  
+  // Línea mes anterior (punteada, gris)
+  var pathAnt = 'M';
+  for(var i = 0; i < 31; i++) {
+    var x = margin.left + i * scaleX;
+    var y = margin.top + innerHeight - dataAnterior[i] * scaleY;
+    pathAnt += (i === 0 ? ' ' : ' L ') + x + ' ' + y;
+  }
+  svg += '<path d="' + pathAnt + '" stroke="rgba(255,255,255,0.2)" stroke-width="2" fill="none" stroke-dasharray="4,4"/>';
+  
+  // Línea mes actual (verde) + área
+  var pathAct = 'M';
+  for(var i = 0; i < 31; i++) {
+    var x = margin.left + i * scaleX;
+    var y = margin.top + innerHeight - dataActual[i] * scaleY;
+    pathAct += (i === 0 ? ' ' : ' L ') + x + ' ' + y;
+  }
+  svg += '<path d="' + pathAct + '" stroke="#00E396" stroke-width="3" fill="none"/>';
+  
+  var areaPath = pathAct + ' L ' + (margin.left + 30*scaleX) + ' ' + (margin.top + innerHeight) + ' L ' + margin.left + ' ' + (margin.top + innerHeight) + ' Z';
+  svg += '<path d="' + areaPath + '" fill="rgba(0,227,150,0.1)"/>';
+  
+  // Eje X
+  svg += '<line x1="' + margin.left + '" y1="' + (margin.top + innerHeight) + '" x2="' + (width - margin.right) + '" y2="' + (margin.top + innerHeight) + '" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>';
+  
+  // Labels días
+  for(var i = 0; i <= 30; i += 5) {
+    var x = margin.left + i * scaleX;
+    svg += '<text x="' + x + '" y="' + (margin.top + innerHeight + 25) + '" fill="rgba(255,255,255,0.4)" font-size="11" text-anchor="middle">' + (i+1) + '</text>';
+  }
+  
+  // Leyenda
+  svg += '<g transform="translate(' + margin.left + ',10)">';
+  svg += '<line x1="0" y1="0" x2="10" y2="0" stroke="#00E396" stroke-width="2"/>';
+  svg += '<text x="15" y="4" fill="rgba(255,255,255,0.6)" font-size="11">Mes Actual</text>';
+  svg += '<line x1="120" y1="0" x2="130" y2="0" stroke="rgba(255,255,255,0.2)" stroke-width="2" stroke-dasharray="4,4"/>';
+  svg += '<text x="135" y="4" fill="rgba(255,255,255,0.6)" font-size="11">Mes Anterior</text>';
+  svg += '</g>';
+  
+  svg += '</svg>';
+  
+  html += svg;
+  html += '</div>';
+  
+  container.innerHTML = html;
+}
+
+document.addEventListener('DOMContentLoaded', renderCashCollectedChart);
 
 </script>
 </body>
