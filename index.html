@@ -4706,36 +4706,52 @@ function initMonthSelector() {
   
   if (!btn || !dropdown) return;
 
-  // Generate months list (last 24 months)
-  const months = [];
-  const MESES_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-  const MESES_FULL = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-  const now = new Date();
+  // Solo meses de 2026
+  const MESES_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const MESES_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const months = MESES_FULL.map((label, i) => ({
+    label: label + ' 2026',
+    mes: MESES_ES[i],
+    anio: 2026,
+    value: MESES_ES[i] + ' 2026',
+    type: 'month'
+  }));
+
+  // Separador + rangos de días
+  const separator = '<div style="height:1px;background:rgba(255,255,255,0.1);margin:8px 0"></div><div style="padding:6px 14px;font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:0.5px;font-weight:600">Rango de días</div>';
   
-  for (let i = 0; i < 24; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    months.push({
-      label: `${MESES_FULL[d.getMonth()]} ${d.getFullYear()}`,
-      mes: MESES_ES[d.getMonth()],
-      anio: d.getFullYear(),
-      value: `${MESES_ES[d.getMonth()]} ${d.getFullYear()}`
-    });
-  }
+  const dayRanges = [
+    { label: '15 días', days: 15 },
+    { label: '30 días', days: 30 },
+    { label: '60 días', days: 60 },
+    { label: '90 días', days: 90 },
+    { label: 'Total', days: 'all' }
+  ];
 
-  // Add "Todos los meses" option
-  months.push({
-    label: 'Todos los meses',
-    mes: null,
-    anio: null,
-    value: 'all'
-  });
-
-  // Populate dropdown
+  // Populate dropdown - meses 2026
   dropdown.innerHTML = months.map((m, i) => 
-    `<div class="month-dropdown-item${i === 0 ? ' selected' : ''}" data-value="${m.value}" data-mes="${m.mes}" data-anio="${m.anio}">
+    `<div class="month-dropdown-item${i === new Date().getMonth() ? ' selected' : ''}" data-value="${m.value}" data-mes="${m.mes}" data-anio="${m.anio}" data-type="month">
       ${m.label}
     </div>`
+  ).join('') + separator + dayRanges.map(d =>
+    `<div class="month-dropdown-item" data-type="days" data-days="${d.days}" style="cursor:pointer">
+      ${d.label}
+    </div>`
   ).join('');
+
+  // Click en rangos de días
+  dropdown.querySelectorAll('[data-type="days"]').forEach(el => {
+    el.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const days = this.dataset.days;
+      const now = new Date();
+      const start = days === 'all' ? new Date(2020,0,1) : new Date(now.getTime() - days * 24 * 3600 * 1000);
+      dropdown.style.display = 'none';
+      btn.classList.remove('open');
+      if(selectedText) selectedText.textContent = this.textContent.trim();
+      renderChartTimeline();
+    });
+  });
 
   // Default: mes actual
   if (months[0] && months[0].mes && months[0].anio) {
