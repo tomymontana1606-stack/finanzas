@@ -4802,15 +4802,17 @@ function renderChartTimeline() {
   var pm = m === 0 ? 11 : m - 1, py = m === 0 ? y - 1 : y;
   var months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
+  var MESES_ABR = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var mesKey = MESES_ABR[m];
+  var mesPrevKey = MESES_ABR[pm];
+
   var i1 = {}, i2 = {};
   (CACHE.ingresos || []).forEach(function(x) {
-    var d = new Date(x.fecha);
-    if(d.getMonth() === m && d.getFullYear() === y) {
-      var day = d.getDate();
+    var day = new Date(x.fecha).getDate();
+    if(x.mes === mesKey && String(x.anio) === String(y)) {
       i1[day] = (i1[day] || 0) + parseFloat(x.monto || 0);
     }
-    if(d.getMonth() === pm && d.getFullYear() === py) {
-      var day = d.getDate();
+    if(x.mes === mesPrevKey && String(x.anio) === String(py)) {
       i2[day] = (i2[day] || 0) + parseFloat(x.monto || 0);
     }
   });
