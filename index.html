@@ -5027,79 +5027,58 @@ function initMonthSelector() {
 }
 
 
-
-}
-
-
-
-// Generar dropdown de meses 2026 + filtros de días
 function initMonthDropdownDynamic() {
   var dropdown = document.getElementById('month-dropdown');
   if(!dropdown) return;
   
   dropdown.innerHTML = '';
-  var months_es = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  var months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
   
-  // Agregar meses de 2026
   for(var i = 0; i < 12; i++) {
-    var opt = document.createElement('div');
-    opt.style.cssText = 'padding:12px;cursor:pointer;border-radius:6px;transition:all 0.2s;color:rgba(255,255,255,0.8)';
-    opt.textContent = months_es[i] + ' 2026';
-    opt.onmouseover = function() { this.style.background = 'rgba(37,99,235,0.2)'; };
-    opt.onmouseout = function() { this.style.background = 'transparent'; };
-    opt.onclick = (function(m) {
-      return function() {
-        var mes_num = String(m+1).padStart(2, '0');
-        document.getElementById('month-dropdown').style.display = 'none';
-      };
-    })(i);
-    dropdown.appendChild(opt);
+    var div = document.createElement('div');
+    div.style.cssText = 'padding:12px;cursor:pointer;color:rgba(255,255,255,0.8)';
+    div.textContent = months[i] + ' 2026';
+    div.onmouseover = function() { this.style.background = 'rgba(37,99,235,0.2)'; };
+    div.onmouseout = function() { this.style.background = ''; };
+    dropdown.appendChild(div);
   }
   
-  // Separador
   var sep = document.createElement('div');
-  sep.style.cssText = 'height:1px;background:rgba(255,255,255,0.1);margin:8px 0';
+  sep.style.height = '1px';
+  sep.style.background = 'rgba(255,255,255,0.1)';
+  sep.style.margin = '8px 0';
   dropdown.appendChild(sep);
   
-  // Etiqueta "RANGO DE DÍAS"
-  var label = document.createElement('div');
-  label.style.cssText = 'padding:8px 12px;font-size:11px;color:rgba(255,255,255,0.4);font-weight:bold;text-transform:uppercase';
-  label.textContent = 'Rango de días';
-  dropdown.appendChild(label);
+  var lbl = document.createElement('div');
+  lbl.style.cssText = 'padding:8px 12px;font-size:11px;color:rgba(255,255,255,0.4)';
+  lbl.textContent = 'RANGO DE DÍAS';
+  dropdown.appendChild(lbl);
   
-  // Botones de días - CONECTADOS AL GRÁFICO
-  var days_arr = [7, 15, 30, 60, 90];
-  days_arr.forEach(function(d) {
-    var opt = document.createElement('div');
-    opt.style.cssText = 'padding:12px;cursor:pointer;border-radius:6px;transition:all 0.2s;color:rgba(255,255,255,0.8)';
-    opt.textContent = d + ' días';
-    opt.onmouseover = function() { this.style.background = 'rgba(37,99,235,0.2)'; };
-    opt.onmouseout = function() { this.style.background = 'transparent'; };
-    opt.onclick = (function(days) {
-      return function() {
-        // ACTUALIZAR GRÁFICO CON EL RANGO SELECCIONADO
-        var now = new Date();
-        var start = new Date(now.getTime() - days * 24 * 3600 * 1000);
-        
-        // Llamar a la función que actualiza el gráfico
-        if(typeof renderChartTimelineCustom === 'function') {
-          renderChartTimelineCustom(start, now);
-        }
-        
-        document.getElementById('month-dropdown').style.display = 'none';
-      };
-    })(d);
-    dropdown.appendChild(opt);
+  var days = [7, 15, 30, 60, 90];
+  days.forEach(function(d) {
+    var div = document.createElement('div');
+    div.style.cssText = 'padding:12px;cursor:pointer;color:rgba(255,255,255,0.8)';
+    div.textContent = d + ' días';
+    div.onmouseover = function() { this.style.background = 'rgba(37,99,235,0.2)'; };
+    div.onmouseout = function() { this.style.background = ''; };
+    div.dataset.days = d;
+    div.onclick = function() {
+      var now = new Date();
+      var start = new Date(now.getTime() - d * 24 * 3600 * 1000);
+      if(typeof renderChartTimelineCustom === 'function') {
+        renderChartTimelineCustom(start, now);
+      }
+      document.getElementById('month-dropdown').style.display = 'none';
+    };
+    dropdown.appendChild(div);
   });
   
-  // Agregar botón "Total"
-  var opt_total = document.createElement('div');
-  opt_total.style.cssText = 'padding:12px;cursor:pointer;border-radius:6px;transition:all 0.2s;color:rgba(255,255,255,0.8)';
-  opt_total.textContent = 'Total';
-  opt_total.onmouseover = function() { this.style.background = 'rgba(37,99,235,0.2)'; };
-  opt_total.onmouseout = function() { this.style.background = 'transparent'; };
-  opt_total.onclick = function() {
-    // MOSTRAR TODO EL HISTÓRICO
+  var div_total = document.createElement('div');
+  div_total.style.cssText = 'padding:12px;cursor:pointer;color:rgba(255,255,255,0.8)';
+  div_total.textContent = 'Total';
+  div_total.onmouseover = function() { this.style.background = 'rgba(37,99,235,0.2)'; };
+  div_total.onmouseout = function() { this.style.background = ''; };
+  div_total.onclick = function() {
     var start = new Date(2020, 0, 1);
     var now = new Date();
     if(typeof renderChartTimelineCustom === 'function') {
@@ -5107,15 +5086,10 @@ function initMonthDropdownDynamic() {
     }
     document.getElementById('month-dropdown').style.display = 'none';
   };
-  dropdown.appendChild(opt_total);
+  dropdown.appendChild(div_total);
 }
 
-// Ejecutar al cargar
-if(document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initMonthDropdownDynamic);
-} else {
-  initMonthDropdownDynamic();
-}
+document.addEventListener('DOMContentLoaded', initMonthDropdownDynamic);
 
 </script>
 </body>
