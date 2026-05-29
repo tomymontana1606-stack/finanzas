@@ -791,6 +791,53 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
   .form-row,.form-row-3 { grid-template-columns:1fr; }
 }
 </style>
+
+<style>
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  
+  .btn-loading {
+    pointer-events: none !important;
+    opacity: 0.6;
+  }
+  
+  .spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(0,0,0,0.9);
+    color: #fff;
+    padding: 14px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  
+  .toast .spinner {
+    width: 12px;
+    height: 12px;
+    margin: 0;
+  }
+</style>
 </head>
 <body>
 
@@ -943,19 +990,14 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
             <div>
               <div class="chart-title" style="margin-bottom:2px">Ingresos vs Gastos</div>
-              <div style="font-size:11px;color:var(--muted)" id="timeline-range-label">Mayo 2026</div>
+              <div style="font-size:11px;color:var(--muted)" id="timeline-range-label">Últimos 6 meses</div>
             </div>
             <div style="display:flex;gap:8px;align-items:center">
               
               
               
               
-              <button class="filter-btn" id="custom-date-btn" data-range="custom">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="margin-right: 4px;">
-                  <path fill-rule="evenodd" clip-rule="evenodd" d="M5.5 0.5V1.25V2H10.5V1.25V0.5H12V1.25V2H14H15.5V3.5V13.5C15.5 14.8807 14.3807 16 13 16H3C1.61929 16 0.5 14.8807 0.5 13.5V3.5V2H2H4V1.25V0.5H5.5ZM2 3.5H14V6H2V3.5ZM2 7.5V13.5C2 14.0523 2.44772 14.5 3 14.5H13C13.5523 14.5 14 14.0523 14 13.5V7.5H2Z"/>
-                </svg>
-                Personalizado
-              </button>
+              
             </div>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
@@ -965,7 +1007,49 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
               <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,0.5)"><span style="width:24px;height:2px;background:#00E396;display:inline-block;border-radius:2px"></span>Revenue</span>
             </div>
           </div>
-          
+          <div id="chart-timeline-container" style="position:relative;height:260px" role="img" aria-label="Línea de tiempo ingresos vs gastos"></div>
+        </div>
+      </div>
+
+      <!-- Date Range Calendar Modal -->
+      <div id="date-range-modal" class="date-modal" style="display:none;">
+        <div class="date-modal-overlay"></div>
+        <div class="date-modal-content">
+          <div class="date-calendar-container">
+            <div class="calendar-header">
+              <button class="calendar-nav-btn" id="prev-month-btn">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M10.5 14.0607L9.96966 13.5303L5.14644 8.7071C4.75592 8.31658 4.75592 7.68341 5.14644 7.29289L9.96966 2.46966L10.5 1.93933L11.5607 2.99999L11.0303 3.53032L6.56065 7.99999L11.0303 12.4697L11.5607 13L10.5 14.0607Z"/>
+                </svg>
+              </button>
+              <div class="calendar-month-year" id="calendar-month-year">June 2025</div>
+              <button class="calendar-nav-btn" id="next-month-btn">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M5.50001 1.93933L6.03034 2.46966L10.8536 7.29288C11.2441 7.68341 11.2441 8.31657 10.8536 8.7071L6.03034 13.5303L5.50001 14.0607L4.43935 13L4.96968 12.4697L9.43935 7.99999L4.96968 3.53032L4.43935 2.99999L5.50001 1.93933Z"/>
+                </svg>
+              </button>
+            </div>
+            <div class="calendar-grid">
+              <div class="calendar-weekdays">
+                <div>Su</div>
+                <div>Mo</div>
+                <div>Tu</div>
+                <div>We</div>
+                <div>Th</div>
+                <div>Fr</div>
+                <div>Sa</div>
+              </div>
+              <div class="calendar-days" id="calendar-days">
+                <!-- Days populated by JS -->
+              </div>
+            </div>
+            <div class="calendar-footer">
+              <button class="calendar-cancel-btn" id="calendar-cancel-btn">Cancelar</button>
+              <button class="calendar-apply-btn" id="calendar-apply-btn">Aplicar</button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div class="charts-row" style="margin-bottom:20px">
         <div class="chart-card"><div class="chart-title">Gastos por categoría</div><div id="chart-gastos-container" style="position:relative;height:200px" role="img" aria-label="Gastos por categoría"></div></div>
@@ -2220,7 +2304,7 @@ function renderDashboardFromCache() {
 
   renderChartGastos(porCat, { totalIngresos, totalGastos, gastoAds, roas, periodo: mes ? `${mes} ${anio}` : 'Todos los períodos' });
   renderChartDonut();
-  renderIngresosMesComparacion();
+  renderChartTimeline();
   renderAlertas();
 }
 
@@ -4621,7 +4705,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const customDateBtn = document.getElementById('custom-date-btn');
   
   const rangeLabels = {
-    '6m': 'Mayo 2026',
+    '6m': 'Últimos 6 meses',
     '1y': 'Último año',
     '2y': 'Últimos 2 años',
     'all': 'Todo el período'
@@ -4985,324 +5069,50 @@ function initMonthSelector() {
 }
 
 
-function initMonthDropdownDynamic() {
-  var dropdown = document.getElementById('month-dropdown');
-  if(!dropdown) return;
+// Toast de carga
+function showLoadingToast(message) {
+  message = message || 'Guardando...';
+  var existing = document.getElementById('loading-toast');
+  if(existing) existing.remove();
   
-  dropdown.innerHTML = '';
-  var months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-  
-  for(var i = 0; i < 12; i++) {
-    var div = document.createElement('div');
-    div.style.cssText = 'padding:12px;cursor:pointer;color:rgba(255,255,255,0.8)';
-    div.textContent = months[i] + ' 2026';
-    div.onmouseover = function() { this.style.background = 'rgba(37,99,235,0.2)'; };
-    div.onmouseout = function() { this.style.background = ''; };
-    dropdown.appendChild(div);
+  var toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.id = 'loading-toast';
+  toast.innerHTML = '<div class="spinner"></div><span>' + message + '</span>';
+  document.body.appendChild(toast);
+}
+
+function hideLoadingToast() {
+  var toast = document.getElementById('loading-toast');
+  if(toast) {
+    setTimeout(function() { toast.remove(); }, 500);
   }
-  
-  var sep = document.createElement('div');
-  sep.style.height = '1px';
-  sep.style.background = 'rgba(255,255,255,0.1)';
-  sep.style.margin = '8px 0';
-  dropdown.appendChild(sep);
-  
-  var lbl = document.createElement('div');
-  lbl.style.cssText = 'padding:8px 12px;font-size:11px;color:rgba(255,255,255,0.4)';
-  lbl.textContent = 'RANGO DE DÍAS';
-  dropdown.appendChild(lbl);
-  
-  var days = [7, 15, 30, 60, 90];
-  days.forEach(function(d) {
-    var div = document.createElement('div');
-    div.style.cssText = 'padding:12px;cursor:pointer;color:rgba(255,255,255,0.8)';
-    div.textContent = d + ' días';
-    div.onmouseover = function() { this.style.background = 'rgba(37,99,235,0.2)'; };
-    div.onmouseout = function() { this.style.background = ''; };
-    div.dataset.days = d;
-    div.onclick = function() {
-      var now = new Date();
-      var start = new Date(now.getTime() - d * 24 * 3600 * 1000);
-      if(typeof renderChartTimelineCustom === 'function') {
-        renderChartTimelineCustom(start, now);
+}
+
+// Envolver función de API
+if(typeof window.api === 'function') {
+  var originalApi = window.api;
+  window.api = function(data) {
+    showLoadingToast('Guardando...');
+    try {
+      var result = originalApi(data);
+      if(result && typeof result.then === 'function') {
+        return result.then(function(res) {
+          hideLoadingToast();
+          return res;
+        }).catch(function(err) {
+          hideLoadingToast();
+          throw err;
+        });
       }
-      document.getElementById('month-dropdown').style.display = 'none';
-    };
-    dropdown.appendChild(div);
-  });
-  
-  var div_total = document.createElement('div');
-  div_total.style.cssText = 'padding:12px;cursor:pointer;color:rgba(255,255,255,0.8)';
-  div_total.textContent = 'Total';
-  div_total.onmouseover = function() { this.style.background = 'rgba(37,99,235,0.2)'; };
-  div_total.onmouseout = function() { this.style.background = ''; };
-  div_total.onclick = function() {
-    var start = new Date(2020, 0, 1);
-    var now = new Date();
-    if(typeof renderChartTimelineCustom === 'function') {
-      renderChartTimelineCustom(start, now);
+      hideLoadingToast();
+      return result;
+    } catch(e) {
+      hideLoadingToast();
+      throw e;
     }
-    document.getElementById('month-dropdown').style.display = 'none';
   };
-  dropdown.appendChild(div_total);
 }
-
-document.addEventListener('DOMContentLoaded', initMonthDropdownDynamic);
-
-
-
-function renderIngresosMesComparacion() {
-  var container = document.getElementById('chart-timeline-container');
-  if(!container) return;
-  
-  var now = new Date();
-  var mesActual = now.getMonth();
-  var anioActual = now.getFullYear();
-  
-  // Mes anterior
-  var mesAnterior = mesActual === 0 ? 11 : mesActual - 1;
-  var anioAnterior = mesActual === 0 ? anioActual - 1 : anioActual;
-  
-  // Obtener ingresos del mes actual agrupados por día
-  var ingMesActual = {};
-  (CACHE.ingresos || []).forEach(function(x) {
-    var d = new Date(x.fecha);
-    if(d.getMonth() === mesActual && d.getFullYear() === anioActual) {
-      var day = d.getDate();
-      ingMesActual[day] = (ingMesActual[day] || 0) + (parseFloat(x.monto) || 0);
-    }
-  });
-  
-  // Obtener ingresos del mes anterior
-  var ingMesAnterior = {};
-  (CACHE.ingresos || []).forEach(function(x) {
-    var d = new Date(x.fecha);
-    if(d.getMonth() === mesAnterior && d.getFullYear() === anioAnterior) {
-      var day = d.getDate();
-      ingMesAnterior[day] = (ingMesAnterior[day] || 0) + (parseFloat(x.monto) || 0);
-    }
-  });
-  
-  // Generar datos acumulados
-  var dias = [];
-  var dataActual = [];
-  var dataAnterior = [];
-  var acumActual = 0;
-  var acumAnterior = 0;
-  
-  for(var i = 1; i <= 31; i++) {
-    dias.push(String(i));
-    acumActual += ingMesActual[i] || 0;
-    acumAnterior += ingMesAnterior[i] || 0;
-    dataActual.push(acumActual);
-    dataAnterior.push(acumAnterior);
-  }
-  
-  // Totales
-  var totalActual = acumActual;
-  var totalAnterior = acumAnterior;
-  var mejora = totalAnterior > 0 ? ((totalActual - totalAnterior) / totalAnterior * 100) : 0;
-  
-  // Crear SVG
-  var width = container.clientWidth || 800;
-  var height = 300;
-  var margin = {top: 20, right: 30, bottom: 40, left: 60};
-  var innerWidth = width - margin.left - margin.right;
-  var innerHeight = height - margin.top - margin.bottom;
-  
-  var maxValue = Math.max(totalActual, totalAnterior) * 1.1;
-  var scaleY = innerHeight / maxValue;
-  var scaleX = innerWidth / 30;
-  
-  var svg = '<svg width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '" style="overflow:visible">';
-  
-  // Grid y ejes
-  svg += '<defs><style>.grid-line{stroke:rgba(255,255,255,0.1);stroke-width:1}</style></defs>';
-  
-  // Línea mes anterior (punteada)
-  var pathAnterior = 'M ' + margin.left;
-  for(var i = 0; i < dataAnterior.length; i++) {
-    var x = margin.left + i * scaleX;
-    var y = margin.top + innerHeight - dataAnterior[i] * scaleY;
-    pathAnterior += (i === 0 ? ' ' : ' L ') + x + ' ' + y;
-  }
-  svg += '<path d="' + pathAnterior + '" stroke="rgba(255,255,255,0.3)" stroke-width="2" fill="none" stroke-dasharray="5,5"/>';
-  
-  // Línea mes actual (verde)
-  var pathActual = 'M ' + margin.left;
-  for(var i = 0; i < dataActual.length; i++) {
-    var x = margin.left + i * scaleX;
-    var y = margin.top + innerHeight - dataActual[i] * scaleY;
-    pathActual += (i === 0 ? ' ' : ' L ') + x + ' ' + y;
-  }
-  svg += '<path d="' + pathActual + '" stroke="#00E396" stroke-width="3" fill="none"/>';
-  
-  // Área bajo la línea
-  var areaPath = pathActual + ' L ' + (margin.left + 30 * scaleX) + ' ' + (margin.top + innerHeight) + ' L ' + margin.left + ' ' + (margin.top + innerHeight) + ' Z';
-  svg += '<path d="' + areaPath + '" fill="rgba(0,227,150,0.1)" stroke="none"/>';
-  
-  // Eje X (días)
-  svg += '<line x1="' + margin.left + '" y1="' + (margin.top + innerHeight) + '" x2="' + (margin.left + innerWidth) + '" y2="' + (margin.top + innerHeight) + '" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>';
-  
-  // Labels días
-  for(var i = 0; i < 31; i += 5) {
-    var x = margin.left + i * scaleX;
-    svg += '<text x="' + x + '" y="' + (margin.top + innerHeight + 25) + '" fill="rgba(255,255,255,0.5)" font-size="11" text-anchor="middle">' + (i+1) + '</text>';
-  }
-  
-  // Eje Y (valores)
-  var steps = [0, maxValue/2, maxValue];
-  steps.forEach(function(v) {
-    var y = margin.top + innerHeight - v * scaleY;
-    svg += '<line x1="' + (margin.left-5) + '" y1="' + y + '" x2="' + margin.left + '" y2="' + y + '" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>';
-    svg += '<text x="' + (margin.left-10) + '" y="' + (y+4) + '" fill="rgba(255,255,255,0.5)" font-size="10" text-anchor="end">$' + Math.round(v/1000) + 'k</text>';
-  });
-  
-  svg += '</svg>';
-  
-  container.innerHTML = svg;
-  
-  // Mostrar totales
-  var header = document.querySelector('[data-month-comparison]');
-  if(!header) {
-    header = document.createElement('div');
-    header.setAttribute('data-month-comparison', '1');
-    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding:0 12px';
-    container.parentElement.insertBefore(header, container);
-  }
-  
-  var mejora_color = mejora >= 0 ? '#00E396' : '#FF4560';
-  header.innerHTML = '<div><div style="font-size:12px;color:rgba(255,255,255,0.5)">Total Acumulado</div><div style="font-size:18px;color:#fff;margin-top:4px">$' + fmt(totalActual) + '</div></div>' +
-    '<div style="text-align:right"><div style="font-size:12px;color:' + mejora_color + '">↑ ' + mejora.toFixed(1) + '% vs Mes Anterior</div><div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:4px">Mes anterior: $' + fmt(totalAnterior) + '</div></div>';
-}
-
-// Llamar al cargar
-document.addEventListener('DOMContentLoaded', renderIngresosMesComparacion);
-
-
-
-function renderCashCollectedChart() {
-  var container = document.getElementById('chart-timeline-container');
-  if(!container) return;
-  
-  var now = new Date();
-  var mesActual = now.getMonth();
-  var anioActual = now.getFullYear();
-  var mesAnterior = mesActual === 0 ? 11 : mesActual - 1;
-  var anioAnterior = mesActual === 0 ? anioActual - 1 : anioActual;
-  
-  var months_es = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-  var mesActualName = months_es[mesActual];
-  
-  // Agrupar ingresos por día
-  var ingMesActual = {};
-  var ingMesAnterior = {};
-  
-  (CACHE.ingresos || []).forEach(function(x) {
-    var d = new Date(x.fecha);
-    if(d.getMonth() === mesActual && d.getFullYear() === anioActual) {
-      var day = d.getDate();
-      ingMesActual[day] = (ingMesActual[day] || 0) + (parseFloat(x.monto) || 0);
-    }
-    if(d.getMonth() === mesAnterior && d.getFullYear() === anioAnterior) {
-      var day = d.getDate();
-      ingMesAnterior[day] = (ingMesAnterior[day] || 0) + (parseFloat(x.monto) || 0);
-    }
-  });
-  
-  // Datos acumulados
-  var acumActual = 0, acumAnterior = 0;
-  var dataActual = [], dataAnterior = [];
-  for(var i = 1; i <= 31; i++) {
-    acumActual += ingMesActual[i] || 0;
-    acumAnterior += ingMesAnterior[i] || 0;
-    dataActual.push(acumActual);
-    dataAnterior.push(acumAnterior);
-  }
-  
-  var totalActual = acumActual;
-  var totalAnterior = acumAnterior;
-  var mejora = totalAnterior > 0 ? ((totalActual - totalAnterior) / totalAnterior * 100) : 0;
-  
-  // HTML
-  var html = '<div style="padding:0">';
-  html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding:0 12px">';
-  html += '<div>';
-  html += '<div style="font-size:11px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:1px">Cash Collected</div>';
-  html += '<div style="font-size:24px;color:#fff;font-weight:bold;margin-top:4px">' + mesActualName + ' 2026</div>';
-  html += '<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:8px">MTD</div>';
-  html += '</div>';
-  html += '<div style="text-align:right">';
-  html += '<div style="font-size:28px;color:#00E396;font-weight:bold">$' + fmt(totalActual) + '</div>';
-  html += '<div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:8px">TOTAL ACUMULADO</div>';
-  html += '</div>';
-  html += '</div>';
-  
-  html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:0 12px;margin-bottom:20px;font-size:12px">';
-  var mejora_color = mejora >= 0 ? '#00E396' : '#FF4560';
-  html += '<div style="color:' + mejora_color + '">↑ ' + mejora.toFixed(1) + '% vs Mes Anterior</div>';
-  html += '<div style="color:rgba(255,255,255,0.5)">Mes anterior hoy: $' + fmt(totalAnterior) + '</div>';
-  html += '</div>';
-  
-  // SVG Gráfico
-  var width = 800, height = 280;
-  var margin = {top: 20, right: 20, bottom: 40, left: 50};
-  var innerWidth = width - margin.left - margin.right;
-  var innerHeight = height - margin.top - margin.bottom;
-  
-  var maxVal = Math.max(totalActual, totalAnterior) * 1.05;
-  var scaleY = innerHeight / maxVal;
-  var scaleX = innerWidth / 30;
-  
-  var svg = '<svg width="100%" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '" preserveAspectRatio="none" style="margin-top:10px">';
-  
-  // Línea mes anterior (punteada, gris)
-  var pathAnt = 'M';
-  for(var i = 0; i < 31; i++) {
-    var x = margin.left + i * scaleX;
-    var y = margin.top + innerHeight - dataAnterior[i] * scaleY;
-    pathAnt += (i === 0 ? ' ' : ' L ') + x + ' ' + y;
-  }
-  svg += '<path d="' + pathAnt + '" stroke="rgba(255,255,255,0.2)" stroke-width="2" fill="none" stroke-dasharray="4,4"/>';
-  
-  // Línea mes actual (verde) + área
-  var pathAct = 'M';
-  for(var i = 0; i < 31; i++) {
-    var x = margin.left + i * scaleX;
-    var y = margin.top + innerHeight - dataActual[i] * scaleY;
-    pathAct += (i === 0 ? ' ' : ' L ') + x + ' ' + y;
-  }
-  svg += '<path d="' + pathAct + '" stroke="#00E396" stroke-width="3" fill="none"/>';
-  
-  var areaPath = pathAct + ' L ' + (margin.left + 30*scaleX) + ' ' + (margin.top + innerHeight) + ' L ' + margin.left + ' ' + (margin.top + innerHeight) + ' Z';
-  svg += '<path d="' + areaPath + '" fill="rgba(0,227,150,0.1)"/>';
-  
-  // Eje X
-  svg += '<line x1="' + margin.left + '" y1="' + (margin.top + innerHeight) + '" x2="' + (width - margin.right) + '" y2="' + (margin.top + innerHeight) + '" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>';
-  
-  // Labels días
-  for(var i = 0; i <= 30; i += 5) {
-    var x = margin.left + i * scaleX;
-    svg += '<text x="' + x + '" y="' + (margin.top + innerHeight + 25) + '" fill="rgba(255,255,255,0.4)" font-size="11" text-anchor="middle">' + (i+1) + '</text>';
-  }
-  
-  // Leyenda
-  svg += '<g transform="translate(' + margin.left + ',10)">';
-  svg += '<line x1="0" y1="0" x2="10" y2="0" stroke="#00E396" stroke-width="2"/>';
-  svg += '<text x="15" y="4" fill="rgba(255,255,255,0.6)" font-size="11">Mes Actual</text>';
-  svg += '<line x1="120" y1="0" x2="130" y2="0" stroke="rgba(255,255,255,0.2)" stroke-width="2" stroke-dasharray="4,4"/>';
-  svg += '<text x="135" y="4" fill="rgba(255,255,255,0.6)" font-size="11">Mes Anterior</text>';
-  svg += '</g>';
-  
-  svg += '</svg>';
-  
-  html += svg;
-  html += '</div>';
-  
-  container.innerHTML = html;
-}
-
-document.addEventListener('DOMContentLoaded', renderCashCollectedChart);
 
 </script>
 </body>
