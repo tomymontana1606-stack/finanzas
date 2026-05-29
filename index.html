@@ -2369,215 +2369,145 @@ function renderAlertas() {
 // Global variable for timeline range
 let TIMELINE_MONTHS = 6;
 
-function renderChartTimeline(months = TIMELINE_MONTHS) {
-  const container = document.getElementById('chart-timeline-container');
-  if (!container) return;
 
-  const MESES_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  const now = new Date();
+function renderChartTimeline() {
+  var c = document.getElementById('chart-timeline-container');
+  if(!c) return;
   
-  // Build months array based on filter
-  const meses = [];
-  const totalMonths = months === 'all' ? 24 : months; // 'all' shows 2 years max
+  var now = new Date();
+  var m = now.getMonth(), y = now.getFullYear();
+  var pm = m === 0 ? 11 : m - 1, py = m === 0 ? y - 1 : y;
   
-  for (let i = totalMonths - 1; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    meses.push({ 
-      label: MESES_ES[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2), 
-      mes: MESES_ES[d.getMonth()], 
-      anio: d.getFullYear() 
-    });
+  var months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  
+  var i1 = {}, i2 = {};
+  (CACHE.ingresos || []).forEach(function(x) {
+    var d = new Date(x.fecha);
+    if(d.getMonth() === m && d.getFullYear() === y) {
+      var day = d.getDate();
+      i1[day] = (i1[day] || 0) + parseFloat(x.monto || 0);
+    }
+    if(d.getMonth() === pm && d.getFullYear() === py) {
+      var day = d.getDate();
+      i2[day] = (i2[day] || 0) + parseFloat(x.monto || 0);
+    }
+  });
+  
+  var a1 = 0, a2 = 0, d1 = [], d2 = [];
+  for(var i = 1; i <= 31; i++) {
+    a1 += i1[i] || 0;
+    a2 += i2[i] || 0;
+    d1.push(a1);
+    d2.push(a2);
   }
-
-  const ingData = meses.map(m => CACHE.ingresos.filter(r => r.mes === m.mes && r.anio === m.anio).reduce((s,r)=>s+r.monto,0));
-  const gasData = meses.map(m => CACHE.gastos.filter(r => r.mes === m.mes && r.anio === m.anio).reduce((s,r)=>s+r.monto,0));
-  const revData = ingData.map((v,i) => Math.max(0, v - gasData[i]));
-  const labels = meses.map(m => m.label);
-
-  const maxValue = Math.max(...ingData, ...gasData, ...revData, 1000);
-  const width = container.clientWidth || 800;
-  const height = 260;
-  const margin = { top: 20, right: 20, bottom: 40, left: 60 };
-  const innerWidth = width - margin.left - margin.right;
-  const innerHeight = height - margin.top - margin.bottom;
-
-  // Generate smooth path
-  const generatePath = (data, close = false) => {
-    if (data.length === 0) return '';
-    
-    const points = data.map((value, i) => {
-      const x = (i / (data.length - 1)) * innerWidth;
-      const y = innerHeight - (value / maxValue) * innerHeight;
-      return { x, y };
-    });
-
-    let path = `M ${points[0].x} ${points[0].y}`;
-    
-    for (let i = 0; i < points.length - 1; i++) {
-      const x1 = points[i].x;
-      const y1 = points[i].y;
-      const x2 = points[i + 1].x;
-      const y2 = points[i + 1].y;
-      const midX = (x1 + x2) / 2;
-      path += ` C ${midX},${y1} ${midX},${y2} ${x2},${y2}`;
+  
+  var t1 = a1, t2 = a2, p = t2 > 0 ? ((t1 - t2) / t2 * 100) : 0;
+  
+  // Contenedor principal
+  c.style.padding = '0';
+  c.style.background = 'transparent';
+  
+  var h = '<div style="padding:24px;background:rgba(0,0,0,0.3);border-radius:12px;border:1px solid rgba(255,255,255,0.1)">';
+  
+  // Header con título grande y total
+  h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid rgba(255,255,255,0.1)">';
+  h += '<div>';
+  h += '<div style="font-size:12px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">DASHBOARD FINANCIERO</div>';
+  h += '<div style="font-size:20px;font-weight:bold;color:white">Cash Collected · ' + months[m] + ' 2026</div>';
+  h += '<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:4px">Acumulado</div>';
+  h += '</div>';
+  h += '<div style="text-align:right">';
+  h += '<div style="font-size:32px;color:#00E396;font-weight:bold;line-height:1">$' + fmt(t1) + '</div>';
+  h += '<div style="font-size:11px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.5px;margin-top:8px">TOTAL ACUMULADO</div>';
+  h += '</div>';
+  h += '</div>';
+  
+  // Comparación
+  h += '<div style="display:flex;justify-content:space-between;margin-bottom:20px;font-size:12px">';
+  h += '<div style="color:' + (p >= 0 ? '#00E396' : '#FF4560') + '">↑ ' + p.toFixed(1) + '% vs Mes Anterior</div>';
+  h += '<div style="color:rgba(255,255,255,0.4)">Mes anterior hoy: $' + fmt(t2) + '</div>';
+  h += '</div>';
+  
+  // Gráfico SVG - GRANDE Y RESPONSIVO
+  var w = 100, ht = 300, ml = 60, mr = 40, mt = 30, mb = 50;
+  var cw = c.parentElement.offsetWidth - 48; // Ancho del contenedor menos padding
+  if(cw < 400) cw = 400;
+  
+  var iw = cw - ml - mr, ih = ht - mt - mb;
+  var max = Math.max(t1, t2) * 1.05 || 1000;
+  var sy = ih / max, sx = iw / 30;
+  
+  h += '<svg width="100%" height="' + ht + '" viewBox="0 0 ' + cw + ' ' + ht + '" preserveAspectRatio="xMidYMid meet" style="margin-bottom:16px">';
+  
+  // Función para suavizar curvas
+  function smoothPath(points, scale) {
+    if(points.length < 2) return "M 0 0";
+    var path = "M " + points[0][0] + " " + points[0][1];
+    for(var i = 1; i < points.length; i++) {
+      var xc = (points[i-1][0] + points[i][0]) / 2;
+      var yc = (points[i-1][1] + points[i][1]) / 2;
+      path += " Q " + points[i-1][0] + " " + points[i-1][1] + " " + xc + " " + yc;
     }
-    
-    if (close) {
-      path += ` L ${innerWidth} ${innerHeight} L 0 ${innerHeight} Z`;
-    }
-    
+    path += " T " + points[points.length-1][0] + " " + points[points.length-1][1];
     return path;
-  };
-
-  const ingPath = generatePath(ingData, false);
-  const ingAreaPath = generatePath(ingData, true);
-  const gasPath = generatePath(gasData, false);
-  const gasAreaPath = generatePath(gasData, true);
-  const revPath = generatePath(revData, false);
-  const revAreaPath = generatePath(revData, true);
-
-  // Y-axis ticks
-  const yTicks = 5;
-  const yStep = maxValue / (yTicks - 1);
-  let yTicksHTML = '';
-  for (let i = 0; i < yTicks; i++) {
-    const value = yStep * i;
-    const y = innerHeight - (value / maxValue) * innerHeight;
-    const label = value >= 1000 ? `$${(value / 1000).toFixed(0)}k` : `$${value.toFixed(0)}`;
-    yTicksHTML += `
-      <line x1="0" y1="${y}" x2="${innerWidth}" y2="${y}" stroke="rgba(255,255,255,0.05)" stroke-width="1" stroke-dasharray="4,4"/>
-      <text x="-10" y="${y}" text-anchor="end" dominant-baseline="middle" fill="var(--muted)" font-size="11" class="chart-label">${label}</text>
-    `;
   }
-
-  // X-axis labels
-  let xLabelsHTML = '';
-  labels.forEach((label, i) => {
-    const x = (i / (labels.length - 1)) * innerWidth;
-    xLabelsHTML += `<text x="${x}" y="${innerHeight + 25}" text-anchor="middle" fill="var(--muted)" font-size="11" class="chart-label">${label}</text>`;
+  
+  // Puntos mes anterior
+  var pts2 = [];
+  for(var i = 0; i < 31; i++) {
+    var x = ml + i * sx;
+    var y = mt + ih - (d2[i] || 0) * sy;
+    pts2.push([x, y]);
+  }
+  var p2 = smoothPath(pts2);
+  h += '<path d="' + p2 + '" stroke="rgba(255,255,255,0.2)" stroke-width="2" fill="none" stroke-dasharray="5,5" stroke-linecap="round" stroke-linejoin="round"/>';
+  
+  // Puntos mes actual
+  var pts1 = [];
+  for(var i = 0; i < 31; i++) {
+    var x = ml + i * sx;
+    var y = mt + ih - (d1[i] || 0) * sy;
+    pts1.push([x, y]);
+  }
+  var p1 = smoothPath(pts1);
+  h += '<path d="' + p1 + '" stroke="#00E396" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
+  
+  // Área sombreada
+  var area = p1 + " L " + (ml + 30*sx) + " " + (mt + ih) + " L " + ml + " " + (mt + ih) + " Z";
+  h += '<path d="' + area + '" fill="rgba(0,227,150,0.15)" stroke="none"/>';
+  
+  // Grid y ejes
+  h += '<line x1="' + ml + '" y1="' + (mt + ih) + '" x2="' + cw + '" y2="' + (mt + ih) + '" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>';
+  h += '<line x1="' + ml + '" y1="' + mt + '" x2="' + ml + '" y2="' + (mt + ih) + '" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>';
+  
+  // Labels eje X (días)
+  for(var i = 0; i <= 30; i += 5) {
+    var x = ml + i * sx;
+    h += '<text x="' + x + '" y="' + (mt + ih + 30) + '" fill="rgba(255,255,255,0.4)" font-size="11" text-anchor="middle">' + (i+1) + '</text>';
+  }
+  
+  // Labels eje Y (valores)
+  var steps = [0, max/2, max];
+  steps.forEach(function(v, idx) {
+    var y = mt + ih - v * sy;
+    var label = idx === 0 ? '$0' : (v >= 1000000 ? '$' + (v/1000000).toFixed(0) + 'M' : '$' + (v/1000).toFixed(0) + 'k');
+    h += '<text x="' + (ml - 10) + '" y="' + (y + 4) + '" fill="rgba(255,255,255,0.4)" font-size="10" text-anchor="end">' + label + '</text>';
   });
-
-  // Interactive dots for each data point
-  let dotsHTML = '';
-  labels.forEach((label, i) => {
-    const x = (i / (labels.length - 1)) * innerWidth;
-    const ingY = innerHeight - (ingData[i] / maxValue) * innerHeight;
-    const gasY = innerHeight - (gasData[i] / maxValue) * innerHeight;
-    const revY = innerHeight - (revData[i] / maxValue) * innerHeight;
-    
-    dotsHTML += `
-      <g class="chart-point-group" data-index="${i}">
-        <circle cx="${x}" cy="${ingY}" r="4" fill="#00E5FF" stroke="var(--bg)" stroke-width="2" opacity="0" class="hover-dot"/>
-        <circle cx="${x}" cy="${gasY}" r="4" fill="#FF4560" stroke="var(--bg)" stroke-width="2" opacity="0" class="hover-dot"/>
-        <circle cx="${x}" cy="${revY}" r="4" fill="#00E396" stroke="var(--bg)" stroke-width="2" opacity="0" class="hover-dot"/>
-        <rect x="${x - 15}" y="0" width="30" height="${innerHeight}" fill="transparent" class="hover-zone" 
-          data-ing="${ingData[i]}" data-gas="${gasData[i]}" data-rev="${revData[i]}" data-label="${label}"/>
-      </g>
-    `;
-  });
-
-  container.innerHTML = `
-    <svg viewBox="0 0 ${width} ${height}" class="area-chart" style="width: 100%; height: 260px;" id="timeline-svg">
-      <defs>
-        <linearGradient id="gradient-ing" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stop-color="#00E5FF" stop-opacity="0.3"/>
-          <stop offset="100%" stop-color="#00E5FF" stop-opacity="0"/>
-        </linearGradient>
-        <linearGradient id="gradient-gas" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stop-color="#FF4560" stop-opacity="0.3"/>
-          <stop offset="100%" stop-color="#FF4560" stop-opacity="0"/>
-        </linearGradient>
-        <linearGradient id="gradient-rev" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stop-color="#00E396" stop-opacity="0.3"/>
-          <stop offset="100%" stop-color="#00E396" stop-opacity="0"/>
-        </linearGradient>
-      </defs>
-      
-      <g transform="translate(${margin.left}, ${margin.top})">
-        ${yTicksHTML}
-        
-        <!-- Revenue area -->
-        <path d="${revAreaPath}" fill="url(#gradient-rev)" class="area-fill" style="animation: fadeIn 0.8s ease"/>
-        <path d="${revPath}" fill="none" stroke="#00E396" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="area-line" style="animation: drawLine 1.2s ease"/>
-        
-        <!-- Gastos area -->
-        <path d="${gasAreaPath}" fill="url(#gradient-gas)" class="area-fill" style="animation: fadeIn 0.8s ease 0.1s both"/>
-        <path d="${gasPath}" fill="none" stroke="#FF4560" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="area-line" style="animation: drawLine 1.2s ease 0.1s both"/>
-        
-        <!-- Ingresos area -->
-        <path d="${ingAreaPath}" fill="url(#gradient-ing)" class="area-fill" style="animation: fadeIn 0.8s ease 0.2s both"/>
-        <path d="${ingPath}" fill="none" stroke="#00E5FF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="area-line" style="animation: drawLine 1.2s ease 0.2s both"/>
-        
-        ${dotsHTML}
-        ${xLabelsHTML}
-      </g>
-    </svg>
-    
-    <div id="chart-tooltip" style="
-      position: absolute;
-      background: rgba(10,10,10,0.95);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 8px;
-      padding: 10px 12px;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.2s;
-      font-size: 12px;
-      z-index: 1000;
-    "></div>
-  `;
-
-  // Add interactivity
-  const svg = container.querySelector('svg');
-  const tooltip = container.querySelector('#chart-tooltip');
-  const hoverZones = container.querySelectorAll('.hover-zone');
-
-  hoverZones.forEach(zone => {
-    zone.addEventListener('mouseenter', (e) => {
-      const ing = e.target.dataset.ing;
-      const gas = e.target.dataset.gas;
-      const rev = e.target.dataset.rev;
-      const label = e.target.dataset.label;
-      
-      // Show dots
-      const group = e.target.closest('.chart-point-group');
-      group.querySelectorAll('.hover-dot').forEach(dot => dot.style.opacity = '1');
-      
-      // Show tooltip
-      tooltip.innerHTML = `
-        <div style="font-weight: 600; margin-bottom: 6px; color: rgba(255,255,255,0.9)">${label}</div>
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-          <span style="width: 8px; height: 8px; background: #00E5FF; border-radius: 2px;"></span>
-          <span style="color: rgba(255,255,255,0.7)">Ingresos:</span>
-          <span style="margin-left: auto; font-weight: 600; color: #00E5FF">${fmt(ing)}</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-          <span style="width: 8px; height: 8px; background: #FF4560; border-radius: 2px;"></span>
-          <span style="color: rgba(255,255,255,0.7)">Gastos:</span>
-          <span style="margin-left: auto; font-weight: 600; color: #FF4560">${fmt(gas)}</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="width: 8px; height: 8px; background: #00E396; border-radius: 2px;"></span>
-          <span style="color: rgba(255,255,255,0.7)">Revenue:</span>
-          <span style="margin-left: auto; font-weight: 600; color: #00E396">${fmt(rev)}</span>
-        </div>
-      `;
-      tooltip.style.opacity = '1';
-    });
-
-    zone.addEventListener('mousemove', (e) => {
-      const rect = container.getBoundingClientRect();
-      tooltip.style.left = (e.clientX - rect.left + 15) + 'px';
-      tooltip.style.top = (e.clientY - rect.top - 60) + 'px';
-    });
-
-    zone.addEventListener('mouseleave', (e) => {
-      const group = e.target.closest('.chart-point-group');
-      group.querySelectorAll('.hover-dot').forEach(dot => dot.style.opacity = '0');
-      tooltip.style.opacity = '0';
-    });
-  });
+  
+  // Leyenda
+  h += '<g transform="translate(' + (ml + 20) + ',20)">';
+  h += '<line x1="0" y1="0" x2="16" y2="0" stroke="#00E396" stroke-width="2.5"/>';
+  h += '<text x="24" y="4" fill="rgba(255,255,255,0.7)" font-size="11" font-weight="500">Mes Actual</text>';
+  h += '<line x1="160" y1="0" x2="176" y2="0" stroke="rgba(255,255,255,0.2)" stroke-width="2" stroke-dasharray="5,5"/>';
+  h += '<text x="184" y="4" fill="rgba(255,255,255,0.7)" font-size="11" font-weight="500">Mes Anterior</text>';
+  h += '</g>';
+  
+  h += '</svg>';
+  h += '</div>';
+  
+  c.innerHTML = h;
 }
+
 
 function renderChartGastos(porCat, meta = {}) {
   const container = document.getElementById('chart-gastos-container');
