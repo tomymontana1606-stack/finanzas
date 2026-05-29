@@ -943,7 +943,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
             <div>
               <div class="chart-title" style="margin-bottom:2px">Ingresos vs Gastos</div>
-              <div style="font-size:11px;color:var(--muted)" id="timeline-range-label">Últimos 6 meses</div>
+              <div style="font-size:11px;color:var(--muted)" id="timeline-range-label">Mayo 2026</div>
             </div>
             <div style="display:flex;gap:8px;align-items:center">
               
@@ -2262,7 +2262,7 @@ function renderDashboardFromCache() {
 
   renderChartGastos(porCat, { totalIngresos, totalGastos, gastoAds, roas, periodo: mes ? `${mes} ${anio}` : 'Todos los períodos' });
   renderChartDonut();
-  renderChartTimeline();
+  renderIngresosMesComparacion();
   renderAlertas();
 }
 
@@ -4663,7 +4663,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const customDateBtn = document.getElementById('custom-date-btn');
   
   const rangeLabels = {
-    '6m': 'Últimos 6 meses',
+    '6m': 'Mayo 2026',
     '1y': 'Último año',
     '2y': 'Últimos 2 años',
     'all': 'Todo el período'
