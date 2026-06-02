@@ -2441,7 +2441,30 @@ function renderDashboardFromCache() {
   }
 
   const totalIngresos = ingresos.reduce((s,r) => s + r.monto, 0);
-  const totalGastos   = gastos.reduce((s,r) => s + r.monto, 0);
+  const gastosDirectos = gastos.reduce((s,r) => s + r.monto, 0);
+
+  // Sumar suscripciones activas al total de gastos del mes
+  const MESES_ABR = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const mesActualNum = new Date().getMonth();
+  const mesActualKey = MESES_ABR[mesActualNum];
+  const anioActual = new Date().getFullYear();
+  
+  // Solo sumar subs si el período seleccionado es el mes actual o no hay filtro de días
+  const esMesActual = !mes || (mes === mesActualKey && String(anio) === String(anioActual));
+  
+  let gastoSubs = 0;
+  if(esMesActual && CACHE.subs && CACHE.subs.length > 0) {
+    gastoSubs = CACHE.subs.reduce((s, sub) => {
+      const costo = parseFloat(sub.costo) || 0;
+      const ciclo = (sub.ciclo || '').toLowerCase().trim();
+      // Solo contar subs con costo > 0 (no gratuitas)
+      if(costo === 0 || sub.plan === 'gratuito' || ciclo === 'gratis') return s;
+      if(ciclo === 'anual' || ciclo === 'annual') return s + costo/12;
+      return s + costo; // mensual, pay/uso, etc
+    }, 0);
+  }
+
+  const totalGastos = gastosDirectos + gastoSubs;
   const revenue       = totalIngresos - totalGastos;
   const gastoAds      = calcularGastoAds(gastos);
   const roas          = calcularROAS(totalIngresos, totalGastos);
