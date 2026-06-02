@@ -793,11 +793,16 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
 
 @media (max-width: 768px) {
 
-  /* LAYOUT */
-  .sidebar { display: none; }
+  /* =====================
+     LAYOUT BASE
+  ===================== */
+  .sidebar { display: none !important; }
   .main { margin-left: 0 !important; padding: 12px !important; }
+  #app { padding-bottom: 72px; }
 
-  /* BOTTOM NAV */
+  /* =====================
+     BOTTOM NAV
+  ===================== */
   .mobile-nav {
     display: flex !important;
     position: fixed;
@@ -805,8 +810,8 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
     background: var(--card);
     border-top: 1px solid var(--border);
     z-index: 999;
-    padding: 6px 0;
-    padding-bottom: env(safe-area-inset-bottom, 6px);
+    padding: 8px 0 10px;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
   }
 
   .mobile-nav-item {
@@ -814,8 +819,8 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 3px;
-    padding: 6px 4px;
+    gap: 4px;
+    padding: 4px 2px;
     cursor: pointer;
     color: var(--muted);
     font-size: 9px;
@@ -824,146 +829,244 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
     border: none;
     background: none;
     font-family: inherit;
+    transition: color 0.2s;
   }
 
   .mobile-nav-item.active { color: var(--blue); }
+  .mobile-nav-item svg { width: 22px; height: 22px; }
 
-  .mobile-nav-item svg {
-    width: 20px;
-    height: 20px;
-  }
-
-  /* Espacio para el bottom nav */
-  #app { padding-bottom: 70px; }
-
-  /* HEADER */
+  /* =====================
+     HEADER DE SECCIÓN
+  ===================== */
   .page-header {
-    flex-direction: column;
-    gap: 12px;
+    flex-direction: column !important;
+    gap: 10px !important;
     align-items: flex-start !important;
+    margin-bottom: 16px !important;
   }
 
-  .page-header h1 {
-    font-size: 22px !important;
+  .page-header h1, .section-title-main {
+    font-size: 20px !important;
   }
 
-  /* MONTH SELECTOR */
-  .month-selector-wrap {
+  .page-header > div:last-child {
     width: 100%;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
   }
 
   #month-selector-btn {
     width: 100%;
-    justify-content: space-between;
   }
 
   .month-dropdown {
     width: 100% !important;
     left: 0 !important;
     right: 0 !important;
-  }
-
-  /* MÉTRICAS */
-  .metrics-grid {
-    grid-template-columns: 1fr 1fr !important;
-    gap: 10px !important;
-  }
-
-  .metric-card {
-    padding: 14px !important;
-  }
-
-  .metric-value {
-    font-size: 22px !important;
-  }
-
-  /* CHART */
-  .chart-card {
-    padding: 16px !important;
-  }
-
-  .chart-card canvas {
-    max-height: 200px !important;
-  }
-
-  /* GRÁFICO CASH COLLECTED */
-  #chart-timeline-container svg {
-    height: 220px !important;
-  }
-
-  /* TABLAS */
-  .table-wrap {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  table {
-    min-width: 500px;
-  }
-
-  /* CARDS DE VENTAS / GASTOS */
-  .data-table th, .data-table td {
-    padding: 10px 8px !important;
-    font-size: 12px !important;
-  }
-
-  /* FORMULARIOS */
-  .form-row, .form-row-3 {
-    grid-template-columns: 1fr !important;
-  }
-
-  .modal-box {
-    margin: 12px !important;
-    padding: 20px !important;
-    max-height: 90vh;
+    max-height: 300px;
     overflow-y: auto;
   }
 
-  /* BOTONES */
-  .btn-primary {
-    width: 100%;
+  /* =====================
+     MÉTRICAS - 2 columnas
+  ===================== */
+  .metrics-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  .metric-card {
+    padding: 12px !important;
+  }
+
+  .metric-value {
+    font-size: 20px !important;
+  }
+
+  .metric-mini canvas {
+    height: 40px !important;
+  }
+
+  /* =====================
+     GRÁFICOS
+  ===================== */
+  .charts-row {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .chart-card {
     padding: 14px !important;
   }
 
-  /* SUSCRIPCIONES */
+  #chart-timeline-container svg {
+    height: 200px !important;
+  }
+
+  #chart-timeline-container div[style*="font-size:28px"] {
+    font-size: 20px !important;
+  }
+
+  #chart-timeline-container div[style*="font-size:18px"] {
+    font-size: 15px !important;
+  }
+
+  /* =====================
+     TABLAS → CARDS en mobile
+  ===================== */
+  
+  /* Ocultar headers de tabla en mobile */
+  .mobile-card-table thead {
+    display: none !important;
+  }
+
+  /* Cada fila se convierte en card */
+  .mobile-card-table tbody tr {
+    display: block !important;
+    background: var(--card) !important;
+    border-radius: 8px !important;
+    margin-bottom: 10px !important;
+    padding: 12px !important;
+    border: 1px solid var(--border) !important;
+  }
+
+  /* Cada celda en su propia línea con label */
+  .mobile-card-table tbody td {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 6px 0 !important;
+    border: none !important;
+    font-size: 13px !important;
+    border-bottom: 1px solid rgba(255,255,255,0.05) !important;
+  }
+
+  .mobile-card-table tbody td:last-child {
+    border-bottom: none !important;
+  }
+
+  /* Label de cada celda */
+  .mobile-card-table tbody td::before {
+    content: attr(data-label);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    font-weight: 600;
+    flex-shrink: 0;
+    margin-right: 8px;
+  }
+
+  /* Tablas que NO son card-table: scroll horizontal */
+  table:not(.mobile-card-table) {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    font-size: 12px;
+  }
+
+  /* =====================
+     SECCIÓN VENTAS
+  ===================== */
+  .ventas-header {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .ventas-header > * {
+    width: 100% !important;
+  }
+
+  /* =====================
+     FORMULARIOS / MODALES
+  ===================== */
+  .form-row, .form-row-3 {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .modal-overlay > div,
+  .modal-box {
+    margin: 8px !important;
+    padding: 16px !important;
+    border-radius: 12px !important;
+    max-height: 88vh !important;
+    overflow-y: auto !important;
+    width: calc(100% - 16px) !important;
+    max-width: none !important;
+  }
+
+  /* =====================
+     SUSCRIPCIONES
+  ===================== */
   .subs-grid {
     grid-template-columns: 1fr !important;
   }
 
-  /* EQUIPO */
-  .equipo-grid {
+  /* =====================
+     CUOTAS - cards
+  ===================== */
+  .cuotas-grid {
     grid-template-columns: 1fr !important;
   }
 
-  /* CHARTS ROW */
-  .charts-row {
-    grid-template-columns: 1fr !important;
-  }
-
-  /* GASTOS CATEGORÍA */
-  .chart-card canvas {
-    height: 180px !important;
-  }
-
-  /* TESORERÍA */
+  /* =====================
+     TESORERÍA
+  ===================== */
   .cuentas-grid {
     grid-template-columns: 1fr !important;
   }
 
-  /* TOTALES SUMMARY */
-  .summary-grid {
+  .mov-summary {
     grid-template-columns: 1fr 1fr !important;
   }
 
-  /* LOGIN */
-  .login-box {
-    margin: 20px !important;
-    padding: 32px 24px !important;
+  /* =====================
+     BOTONES
+  ===================== */
+  .btn-primary {
+    padding: 13px !important;
+    width: 100%;
   }
 
-  /* TOAST */
+  /* =====================
+     LOGIN
+  ===================== */
+  .login-box {
+    margin: 16px !important;
+    padding: 28px 20px !important;
+    width: calc(100% - 32px) !important;
+  }
+
+  /* =====================
+     TOAST
+  ===================== */
   .loading-toast {
     bottom: 80px !important;
+    left: 16px !important;
+    right: 16px !important;
+  }
+
+  /* =====================
+     EQUIPO - tabla a cards
+  ===================== */
+  .equipo-table thead { display: none !important; }
+  .equipo-table tbody tr {
+    display: block !important;
+    background: var(--card) !important;
+    border-radius: 8px !important;
+    margin-bottom: 10px !important;
+    padding: 12px !important;
+    border: 1px solid var(--border) !important;
+  }
+  .equipo-table tbody td {
+    display: flex !important;
+    justify-content: space-between !important;
+    padding: 5px 0 !important;
+    border: none !important;
+    font-size: 13px !important;
   }
 }
 </style>
