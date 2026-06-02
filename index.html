@@ -2557,13 +2557,13 @@ function renderDashboardFromCache() {
   const porCat = {};
   gastos.forEach(g => { porCat[g.categoria] = (porCat[g.categoria]||0) + g.monto; });
 
-  // Sumar suscripciones: en su categoría propia Y en la categoría que tienen
-  const subs = JSON.parse(localStorage.getItem('dash_subs') || '[]');
-  const subsActivasCosto = subs.filter(s => s.costo > 0);
+  // Sumar suscripciones: SOLO en "Suscripciones" (sin duplicar por categoría)
+  const subs = (CACHE.subs || JSON.parse(localStorage.getItem('dash_subs') || '[]'));
+  const subsActivasCosto = subs.filter(s => parseFloat(s.costo) > 0 && s.plan !== 'gratuito');
   let totalSubs = 0;
   subsActivasCosto.forEach(s => {
-    const costoMes = s.ciclo === 'Anual' ? +(s.costo/12).toFixed(2) : +s.costo;
-    porCat[s.categoria] = (porCat[s.categoria]||0) + costoMes;
+    const ciclo = (s.ciclo || '').toLowerCase();
+    const costoMes = ciclo === 'anual' ? +(parseFloat(s.costo)/12).toFixed(2) : +parseFloat(s.costo);
     porCat['Suscripciones'] = (porCat['Suscripciones']||0) + costoMes;
     totalSubs += costoMes;
   });
@@ -2709,7 +2709,7 @@ function renderChartGastos(porCat, meta = {}) {
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
 
-  const maxValue = Math.max(...data, 1000);
+  const maxValue = Math.max(...data) * 1.25 || 100; // Escala al valor real + 25% de margen
   const barWidth = innerWidth / labels.length;
   const barGap = Math.min(barWidth * 0.3, 20);
   const actualBarWidth = Math.max(8, barWidth - barGap);
