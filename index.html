@@ -1620,13 +1620,30 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
         <div class="form-hint">La cuenta donde se deposita el adelanto. Si no tenés cuentas, <span style="color:var(--accent);cursor:pointer" onclick="alert('Andá a Tesorería → + Agregar cuenta para crear tus cuentas de cobro')">creá una primero</span>.</div>
       </div>
     </div>
-    <div class="form-group">
-      <label class="form-label">Primer vencimiento de cuota</label>
-      <input class="form-input" type="date" id="v-primer-venc" />
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Comisión pasarela</label>
+        <div style="display:flex;gap:6px;align-items:stretch">
+          <div style="display:flex;background:var(--surface);border:1px solid var(--border);border-radius:var(--rsm);overflow:hidden;flex-shrink:0">
+            <button type="button" id="v-com-tipo-pct" class="tipo-btn active" onclick="setComTipo('pct')" style="border:none;border-radius:0;padding:0 14px;margin:0">%</button>
+            <button type="button" id="v-com-tipo-monto" class="tipo-btn" onclick="setComTipo('monto')" style="border:none;border-radius:0;padding:0 14px;margin:0">$</button>
+          </div>
+          <input class="form-input" type="number" id="v-comision" placeholder="0" min="0" step="0.01" oninput="calcVenta()" style="flex:1" />
+        </div>
+        <div class="form-hint" id="v-comision-hint">Se descuenta de cada cobro (seña + cuotas) y se registra como gasto.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Primer vencimiento de cuota</label>
+        <input class="form-input" type="date" id="v-primer-venc" />
+      </div>
     </div>
     <div id="v-resumen" style="background:var(--surface);border-radius:var(--rsm);padding:12px 14px;font-size:13px;display:none;margin-bottom:4px">
       <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--muted)">Saldo a financiar</span><span id="v-saldo" style="color:var(--gold);font-weight:500">—</span></div>
-      <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Valor por cuota</span><span id="v-por-cuota" style="color:var(--accent);font-weight:500">—</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--muted)">Valor por cuota</span><span id="v-por-cuota" style="color:var(--accent);font-weight:500">—</span></div>
+      <div id="v-com-row" style="display:none">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;padding-top:6px;border-top:1px solid var(--border)"><span style="color:var(--muted)">Comisión pasarela (total estimado)</span><span id="v-com-total" style="color:var(--red);font-weight:500">—</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Neto estimado a recibir</span><span id="v-neto" style="color:var(--green);font-weight:600">—</span></div>
+      </div>
     </div>
     <div class="form-group"><label class="form-label">Notas</label><input class="form-input" id="v-notas" placeholder="Condiciones, observaciones..." /></div>
     <div class="modal-actions">
@@ -1702,7 +1719,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
       <div class="form-group">
         <label class="form-label">Categoría</label>
         <select class="form-select" id="gas-categoria" onchange="toggleCatCustom('gas')">
-          <option>ADS</option><option>Herramientas</option><option>Equipo</option><option>Otro</option>
+          <option>ADS</option><option>Herramientas</option><option>Equipo</option><option>Comisiones de pasarela</option><option>Otro</option>
         </select>
       </div>
       <div class="form-group"><label class="form-label">Fecha</label><input class="form-input" type="date" id="gas-fecha" /></div>
@@ -1746,7 +1763,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
     <div class="form-row">
       <div class="form-group"><label class="form-label">Categoría</label>
         <select class="form-select" id="eg-categoria" onchange="toggleCatCustom('eg')">
-          <option>ADS</option><option>Herramientas</option><option>Equipo</option><option>Otro</option>
+          <option>ADS</option><option>Herramientas</option><option>Equipo</option><option>Comisiones de pasarela</option><option>Otro</option>
         </select>
       </div>
       <div class="form-group"><label class="form-label">Fecha</label><input class="form-input" type="date" id="eg-fecha" /></div>
@@ -2906,6 +2923,8 @@ async function saveVenta() {
   const cuentaIdSel= document.getElementById('v-metodo-pago').value;
   const primerVenc = document.getElementById('v-primer-venc').value;
   const notas      = document.getElementById('v-notas').value.trim();
+  const comTipo    = V_COM_TIPO;
+  const comValor   = parseFloat(document.getElementById('v-comision').value) || 0;
 
   if (!cliente || !total) { showToast('Completá cliente y precio total','err'); return; }
 
@@ -2936,6 +2955,7 @@ async function saveVenta() {
     id: 'V' + Date.now(),
     cliente, telefono, email, fecha, vendedor, producto,
     metodoPago, total, adelanto, saldo, nCuotas, cuotas, notas,
+    comTipo, comValor,
     esVenta: true
   };
 
@@ -2951,6 +2971,12 @@ async function saveVenta() {
         if (cuentaId) {
           await registrarEnTesoreria(cuentaId, fecha, `Adelanto - ${cliente} (${producto})`, adelanto);
         }
+
+        // Registrar comisión de pasarela sobre el adelanto
+        const comAdelanto = calcComisionPasarela(adelanto, comTipo, comValor);
+        if (comAdelanto > 0) {
+          await registrarComisionPasarela(comAdelanto, fecha, `${cliente} (adelanto)`);
+        }
       }
     }
     // Las cuotas se guardan en localStorage
@@ -2960,7 +2986,8 @@ async function saveVenta() {
 
     showToast('Venta registrada ✓','ok');
     closeModal('venta');
-    clearForm(['v-cliente','v-telefono','v-email','v-producto','v-total','v-adelanto','v-notas']);
+    clearForm(['v-cliente','v-telefono','v-email','v-producto','v-total','v-adelanto','v-notas','v-comision']);
+    setComTipo('pct');
     document.getElementById('v-resumen').style.display = 'none';
     renderIngresosFromCache();
     renderDashboardFromCache();
@@ -2968,17 +2995,75 @@ async function saveVenta() {
   } catch(e) { showToast('Error guardando','err'); }
 }
 
+// Tipo de comisión de pasarela actualmente seleccionado en el modal de venta
+let V_COM_TIPO = 'pct';
+
+function setComTipo(tipo) {
+  V_COM_TIPO = tipo;
+  document.getElementById('v-com-tipo-pct').classList.toggle('active', tipo === 'pct');
+  document.getElementById('v-com-tipo-monto').classList.toggle('active', tipo === 'monto');
+  const inp = document.getElementById('v-comision');
+  const hint = document.getElementById('v-comision-hint');
+  if (tipo === 'pct') {
+    inp.placeholder = '0';
+    if (hint) hint.textContent = '% que cobra la pasarela sobre cada cobro (seña + cada cuota). Se descuenta y se registra como gasto.';
+  } else {
+    inp.placeholder = '0';
+    if (hint) hint.textContent = '$ fijo de comisión por cada cobro (seña + cada cuota). Se descuenta y se registra como gasto.';
+  }
+  calcVenta();
+}
+
+// Calcula la comisión de pasarela para un monto cobrado dado
+function calcComisionPasarela(montoCobrado, tipo, valor) {
+  const v = parseFloat(valor) || 0;
+  const m = parseFloat(montoCobrado) || 0;
+  if (v <= 0 || m <= 0) return 0;
+  if (tipo === 'monto') return Math.min(v, m); // fijo por cobro, nunca mayor al cobro
+  return +(m * (v / 100)).toFixed(2);           // porcentaje
+}
+
 function calcVenta() {
   const total   = parseFloat(document.getElementById('v-total').value) || 0;
   const adelanto= parseFloat(document.getElementById('v-adelanto').value) || 0;
   const nCuotas = parseInt(document.getElementById('v-cuotas').value) || 1;
+  const comVal  = parseFloat(document.getElementById('v-comision').value) || 0;
   const saldo   = Math.max(0, total - adelanto);
   const porCuota= nCuotas > 0 ? saldo / nCuotas : saldo;
   if (total > 0) {
     document.getElementById('v-resumen').style.display = 'block';
     document.getElementById('v-saldo').textContent    = fmt(saldo);
     document.getElementById('v-por-cuota').textContent = fmt(porCuota);
+
+    // Comisión total estimada = comisión sobre cada cobro (seña + cada cuota)
+    const comRow = document.getElementById('v-com-row');
+    if (comVal > 0) {
+      let comTotal = 0;
+      if (adelanto > 0) comTotal += calcComisionPasarela(adelanto, V_COM_TIPO, comVal);
+      for (let i = 0; i < nCuotas; i++) comTotal += calcComisionPasarela(porCuota, V_COM_TIPO, comVal);
+      const neto = total - comTotal;
+      comRow.style.display = 'block';
+      document.getElementById('v-com-total').textContent = '-' + fmt(comTotal);
+      document.getElementById('v-neto').textContent = fmt(neto);
+    } else {
+      comRow.style.display = 'none';
+    }
   }
+}
+
+// Registra la comisión de pasarela como gasto (categoría "Comisiones de pasarela")
+async function registrarComisionPasarela(monto, fecha, clienteDesc) {
+  const m = parseFloat(monto) || 0;
+  if (m <= 0) return;
+  const categoria = 'Comisiones de pasarela';
+  const concepto = `Comisión pasarela - ${clienteDesc || ''}`.trim();
+  try {
+    const res = await api({ action:'addGasto', categoria, fecha, concepto, monto:m });
+    if (res && res.ok) {
+      const d = parseFechaLocal(fecha);
+      CACHE.gastos.unshift({ id:res.id, fecha, categoria, concepto, monto:m, metodo:'', pagador:'', mes:d.mes, anio:d.anio });
+    }
+  } catch(e) { console.error('Error registrando comisión pasarela:', e); }
 }
 
 function editIngreso(id) {
@@ -3069,7 +3154,7 @@ function renderGastosFromCache() {
   const tbody = document.getElementById('tbody-gastos');
   let data = CACHE.gastos;
   if (mes) data = data.filter(r => r.mes == mes && String(r.anio) == String(anio));
-  const catColors = { ADS:'tag-red', VTURB:'tag-purple', VSL:'tag-blue', GHL:'tag-gold', Herramientas:'tag-green', Equipo:'tag-gold' };
+  const catColors = { ADS:'tag-red', VTURB:'tag-purple', VSL:'tag-blue', GHL:'tag-gold', Herramientas:'tag-green', Equipo:'tag-gold', 'Comisiones de pasarela':'tag-orange' };
   if (!data.length) {
     tbody.innerHTML = '<tr><td colspan="5"><div class="empty">Sin gastos en este período</div></td></tr>';
     return;
@@ -3363,7 +3448,11 @@ function confirmarCobro() {
           saveMovsLocal(movs);
           renderTesoreria();
         }
-        
+
+        // Comisión de pasarela sobre el saldo cobrado
+        const comSaldo = calcComisionPasarela(monto, v.comTipo, v.comValor);
+        if (comSaldo > 0) registrarComisionPasarela(comSaldo, fecha, `${v.cliente} (saldo)`);
+
         renderIngresosFromCache();
         renderDashboardFromCache();
         renderCuotas();
@@ -3421,6 +3510,9 @@ function confirmarCobro() {
       CACHE.ingresos.unshift({ id:res.id, fecha, nombre:v.cliente, concepto:`Cuota ${c.num}/${v.nCuotas} - ${v.producto||''} (${metodo})`, monto, vendedor:v.vendedor||'', esVenta:true, mes:d.mes, anio:d.anio });
       c.ingresoId = res.id;
       localStorage.setItem('dash_ventas', JSON.stringify(ventas));
+      // Comisión de pasarela sobre la cuota cobrada
+      const comCuota = calcComisionPasarela(monto, v.comTipo, v.comValor);
+      if (comCuota > 0) registrarComisionPasarela(comCuota, fecha, `${v.cliente} (cuota ${c.num}/${v.nCuotas})`);
       renderIngresosFromCache();
       renderDashboardFromCache();
     }
@@ -5093,11 +5185,17 @@ function initMonthSelector() {
   });
 
   // Default: mes actual
-  if (months[0] && months[0].mes && months[0].anio) {
-    SELECTED_PERIOD = { mes: months[0].mes, anio: parseInt(months[0].anio) };
-    selectedText.textContent = months[0].label;
+  const mesActualIdx = new Date().getMonth();
+  const mesDefault = months[mesActualIdx] || months[0];
+  if (mesDefault && mesDefault.mes && mesDefault.anio) {
+    SELECTED_PERIOD = { mes: mesDefault.mes, anio: parseInt(mesDefault.anio) };
+    selectedText.textContent = mesDefault.label;
     const dashPeriod = document.getElementById('dash-period');
-    if (dashPeriod) dashPeriod.textContent = months[0].value;
+    if (dashPeriod) dashPeriod.textContent = mesDefault.value;
+    // Marcar visualmente el mes actual como seleccionado en el dropdown
+    dropdown.querySelectorAll('.month-dropdown-item').forEach(i => i.classList.remove('selected'));
+    const items = dropdown.querySelectorAll('[data-type="month"]');
+    if (items[mesActualIdx]) items[mesActualIdx].classList.add('selected');
   }
 
   // Toggle dropdown
