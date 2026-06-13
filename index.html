@@ -3113,6 +3113,8 @@ async function saveVenta() {
     resetVentaModal();
     closeModal('venta');
     renderIngresosFromCache();
+    renderGastosFromCache();
+    renderTesoreria();
     renderDashboardFromCache();
     renderCuotas();
   } catch(e) { showToast('Error guardando','err'); }
@@ -3648,7 +3650,7 @@ function confirmarCobro() {
     localStorage.setItem('dash_ventas', JSON.stringify(ventas));
     
     // Registrar como ingreso en el Sheet
-    api({ action:'addIngreso', nombre:v.cliente, fecha, concepto:`Saldo pendiente - ${v.producto||''} (${metodo})`, monto, vendedor:v.vendedor||'', esVenta:true }).then(res => {
+    api({ action:'addIngreso', nombre:v.cliente, fecha, concepto:`Saldo pendiente - ${v.producto||''} (${metodo})`, monto, vendedor:v.vendedor||'', esVenta:true }).then(async res => {
       if (res.ok) {
         const d = parseFechaLocal(fecha);
         CACHE.ingresos.unshift({ id:res.id, fecha, nombre:v.cliente, concepto:`Saldo pendiente - ${v.producto||''} (${metodo})`, monto, vendedor:v.vendedor||'', esVenta:true, mes:d.mes, anio:d.anio });
@@ -3666,9 +3668,10 @@ function confirmarCobro() {
         }
 
         // Comisión como gasto
-        if (comSaldo > 0) registrarComisionPasarela(comSaldo, fecha, `${v.cliente} (saldo)`);
+        if (comSaldo > 0) await registrarComisionPasarela(comSaldo, fecha, `${v.cliente} (saldo)`);
 
         renderIngresosFromCache();
+        renderGastosFromCache();
         renderDashboardFromCache();
         renderCuotas();
       }
@@ -3723,15 +3726,16 @@ function confirmarCobro() {
   }
 
   // Registrar en Sheet
-  api({ action:'addIngreso', nombre:v.cliente, fecha, concepto:`Cuota ${c.num}/${v.nCuotas} - ${v.producto||''} (${metodo})`, monto, vendedor:v.vendedor||'', esVenta:true }).then(res => {
+  api({ action:'addIngreso', nombre:v.cliente, fecha, concepto:`Cuota ${c.num}/${v.nCuotas} - ${v.producto||''} (${metodo})`, monto, vendedor:v.vendedor||'', esVenta:true }).then(async res => {
     if (res.ok) {
       const d = parseFechaLocal(fecha);
       CACHE.ingresos.unshift({ id:res.id, fecha, nombre:v.cliente, concepto:`Cuota ${c.num}/${v.nCuotas} - ${v.producto||''} (${metodo})`, monto, vendedor:v.vendedor||'', esVenta:true, mes:d.mes, anio:d.anio });
       c.ingresoId = res.id;
       localStorage.setItem('dash_ventas', JSON.stringify(ventas));
       // Comisión de pasarela como gasto
-      if (comCuota > 0) registrarComisionPasarela(comCuota, fecha, `${v.cliente} (cuota ${c.num}/${v.nCuotas})`);
+      if (comCuota > 0) await registrarComisionPasarela(comCuota, fecha, `${v.cliente} (cuota ${c.num}/${v.nCuotas})`);
       renderIngresosFromCache();
+      renderGastosFromCache();
       renderDashboardFromCache();
     }
   });
