@@ -1574,8 +1574,9 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
 <!-- Nueva venta con cuotas -->
 <div class="modal-overlay" id="modal-venta">
   <div class="modal">
-    <div class="modal-title">Nueva Venta</div>
-    <div class="modal-sub">Registrá la venta y el plan de cobro</div>
+    <div class="modal-title" id="v-modal-title">Nueva Venta</div>
+    <div class="modal-sub" id="v-modal-sub">Registrá la venta y el plan de cobro</div>
+    <input type="hidden" id="v-edit-id" value="" />
     <div class="divider-label" style="margin-top:0">👤 Datos del cliente</div>
     <div class="form-row">
       <div class="form-group"><label class="form-label">Nombre del cliente</label><input class="form-input" id="v-cliente" placeholder="Nombre completo" /></div>
@@ -1648,7 +1649,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
     <div class="form-group"><label class="form-label">Notas</label><input class="form-input" id="v-notas" placeholder="Condiciones, observaciones..." /></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('venta')">Cancelar</button>
-      <button class="btn-save" onclick="saveVenta()">Registrar venta</button>
+      <button class="btn-save" id="v-save-btn" onclick="saveVenta()">Registrar venta</button>
     </div>
   </div>
 </div>
@@ -2127,6 +2128,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxI_d6SGxrgXVVvD8H4nmH8
 let TOKEN = localStorage.getItem('dash_token') || '';
 let CACHE = { ingresos:[], gastos:[], equipo:[], subs:[], ventas:[], cuentas:[], movimientos:[] };
 let SELECTED_PERIOD = null; // For month/year filter
+let V_COM_TIPO = 'pct'; // Tipo de comisión de pasarela seleccionado en el modal de venta
 let charts = {};
 const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
@@ -2928,6 +2930,57 @@ async function saveVenta() {
 
   if (!cliente || !total) { showToast('Completá cliente y precio total','err'); return; }
 
+  const editId = document.getElementById('v-edit-id').value;
+
+  // ===== MODO EDICIÓN =====
+  if (editId) {
+    const ventas = JSON.parse(localStorage.getItem('dash_ventas') || '[]');
+    const idx = ventas.findIndex(x => x.id === editId);
+    if (idx < 0) { showToast('Venta no encontrada','err'); resetVentaModal(); closeModal('venta'); return; }
+    const v = ventas[idx];
+
+    // Cuenta de cobro
+    let metodoPagoE = v.metodoPago || '';
+    if (cuentaIdSel) {
+      const ctaE = getCuentas().find(c => c.id === cuentaIdSel);
+      metodoPagoE = ctaE ? ctaE.nombre : cuentaIdSel;
+    }
+
+    const saldoE = Math.max(0, total - adelanto);
+
+    // Reconstruir cuotas: conservar las pagadas, regenerar las pendientes
+    const cuotasPagadas = (v.cuotas || []).filter(c => c.pagada);
+    const cobradoPagadas = cuotasPagadas.reduce((s,c)=>s+(c.montoCobrado||c.monto),0);
+    const saldoPendiente = Math.max(0, total - adelanto - cobradoPagadas);
+    const pendientesCount = Math.max(0, nCuotas - cuotasPagadas.length);
+    const porCuotaE = pendientesCount > 0 ? saldoPendiente / pendientesCount : 0;
+
+    const nuevasCuotas = [...cuotasPagadas];
+    for (let i = 0; i < pendientesCount; i++) {
+      const numCuota = cuotasPagadas.length + i + 1;
+      const venc = primerVenc ? addMonths(primerVenc, cuotasPagadas.length + i) : '';
+      nuevasCuotas.push({ num:numCuota, monto:porCuotaE, vence:venc, pagada:false });
+    }
+
+    ventas[idx] = {
+      ...v,
+      cliente, telefono, email, fecha, vendedor, producto,
+      metodoPago: metodoPagoE, total, adelanto, saldo: saldoE,
+      nCuotas, cuotas: nuevasCuotas, notas,
+      comTipo, comValor
+    };
+    localStorage.setItem('dash_ventas', JSON.stringify(ventas));
+
+    showToast('Venta actualizada ✓','ok');
+    resetVentaModal();
+    closeModal('venta');
+    renderIngresosFromCache();
+    renderDashboardFromCache();
+    renderCuotas();
+    return;
+  }
+  // ===== FIN MODO EDICIÓN =====
+
   // Get cuenta info
   let metodoPago = '';
   let cuentaId = '';
@@ -2967,16 +3020,25 @@ async function saveVenta() {
         const d = parseFechaLocal(fecha);
         CACHE.ingresos.unshift({ id:res.id, fecha, nombre:cliente, concepto:`Adelanto - ${producto}`, monto:adelanto, vendedor, esVenta:true, mes:d.mes, anio:d.anio });
         
-        // Registrar adelanto en tesorería automáticamente si eligió cuenta
+        // Comisión de pasarela sobre el adelanto
+        const comAdelanto = calcComisionPasarela(adelanto, comTipo, comValor);
+
+        // Registrar en tesorería el NETO (adelanto menos comisión) si eligió cuenta
         if (cuentaId) {
-          await registrarEnTesoreria(cuentaId, fecha, `Adelanto - ${cliente} (${producto})`, adelanto);
+          const neto = adelanto - comAdelanto;
+          const descTeso = comAdelanto > 0
+            ? `Adelanto - ${cliente} (${producto}) · neto s/comisión ${fmt(comAdelanto)}`
+            : `Adelanto - ${cliente} (${producto})`;
+          await registrarEnTesoreria(cuentaId, fecha, descTeso, neto);
         }
 
-        // Registrar comisión de pasarela sobre el adelanto
-        const comAdelanto = calcComisionPasarela(adelanto, comTipo, comValor);
+        // Registrar la comisión como gasto
         if (comAdelanto > 0) {
           await registrarComisionPasarela(comAdelanto, fecha, `${cliente} (adelanto)`);
         }
+
+        // Guardar el id del ingreso del adelanto en la venta (para poder editarla luego)
+        ventaObj.adelantoIngresoId = res.id;
       }
     }
     // Las cuotas se guardan en localStorage
@@ -2985,19 +3047,30 @@ async function saveVenta() {
     localStorage.setItem('dash_ventas', JSON.stringify(ventas));
 
     showToast('Venta registrada ✓','ok');
+    resetVentaModal();
     closeModal('venta');
-    clearForm(['v-cliente','v-telefono','v-email','v-producto','v-total','v-adelanto','v-notas','v-comision']);
-    setComTipo('pct');
-    document.getElementById('v-resumen').style.display = 'none';
     renderIngresosFromCache();
     renderDashboardFromCache();
     renderCuotas();
   } catch(e) { showToast('Error guardando','err'); }
 }
 
-// Tipo de comisión de pasarela actualmente seleccionado en el modal de venta
-let V_COM_TIPO = 'pct';
+// Limpia el modal de venta y lo devuelve a modo "crear"
+function resetVentaModal() {
+  clearForm(['v-cliente','v-telefono','v-email','v-producto','v-total','v-adelanto','v-notas','v-comision']);
+  document.getElementById('v-edit-id').value = '';
+  document.getElementById('v-cuotas').value = '1';
+  const selV = document.getElementById('v-vendedor'); if (selV) selV.value = '';
+  const selC = document.getElementById('v-metodo-pago'); if (selC) selC.value = '';
+  document.getElementById('v-modal-title').textContent = 'Nueva Venta';
+  document.getElementById('v-modal-sub').textContent = 'Registrá la venta y el plan de cobro';
+  document.getElementById('v-save-btn').textContent = 'Registrar venta';
+  setComTipo('pct');
+  const resumen = document.getElementById('v-resumen');
+  if (resumen) resumen.style.display = 'none';
+}
 
+// Tipo de comisión de pasarela actualmente seleccionado en el modal de venta
 function setComTipo(tipo) {
   V_COM_TIPO = tipo;
   document.getElementById('v-com-tipo-pct').classList.toggle('active', tipo === 'pct');
@@ -3066,11 +3139,85 @@ async function registrarComisionPasarela(monto, fecha, clienteDesc) {
   } catch(e) { console.error('Error registrando comisión pasarela:', e); }
 }
 
+// Abre el modal de venta en modo EDICIÓN, precargado con la venta completa
+function editVentaCompleta(ventaId) {
+  const ventas = JSON.parse(localStorage.getItem('dash_ventas') || '[]');
+  const v = ventas.find(x => x.id === ventaId);
+  if (!v) { showToast('Venta no encontrada','err'); return; }
+
+  // Poblar selects (vendedor + cuenta de cobro)
+  fillVendedorSelects();
+  fillMetodoPagoSelect();
+
+  // Modo edición
+  document.getElementById('v-edit-id').value = ventaId;
+  document.getElementById('v-modal-title').textContent = 'Editar Venta';
+  document.getElementById('v-modal-sub').textContent = 'Modificá los datos de la venta y el plan de cobro';
+  document.getElementById('v-save-btn').textContent = 'Guardar cambios';
+
+  // Datos del cliente
+  document.getElementById('v-cliente').value  = v.cliente || '';
+  document.getElementById('v-telefono').value = v.telefono || '';
+  document.getElementById('v-email').value    = v.email || '';
+  document.getElementById('v-fecha').value    = String(v.fecha||'').split('T')[0];
+  document.getElementById('v-producto').value = v.producto || '';
+
+  // Estructura de pago
+  document.getElementById('v-total').value    = v.total || '';
+  document.getElementById('v-adelanto').value = v.adelanto || '';
+  document.getElementById('v-cuotas').value   = String(v.nCuotas || 1);
+  document.getElementById('v-notas').value    = v.notas || '';
+
+  // Primer vencimiento (de la primera cuota)
+  const primeraCuota = (v.cuotas||[])[0];
+  document.getElementById('v-primer-venc').value = primeraCuota && primeraCuota.vence
+    ? toISOInput(primeraCuota.vence) : '';
+
+  // Vendedor
+  const selVend = document.getElementById('v-vendedor');
+  if (selVend) selVend.value = v.vendedor || '';
+
+  // Cuenta de cobro: intentar matchear por nombre guardado
+  const selCta = document.getElementById('v-metodo-pago');
+  if (selCta) {
+    const cta = getCuentas().find(c => c.nombre === v.metodoPago);
+    selCta.value = cta ? cta.id : '';
+  }
+
+  // Comisión
+  setComTipo(v.comTipo === 'monto' ? 'monto' : 'pct');
+  document.getElementById('v-comision').value = v.comValor || '';
+
+  calcVenta();
+  document.getElementById('modal-venta').classList.add('open');
+}
+
+// Convierte fecha (DD/MM/YYYY o YYYY-MM-DD) a formato input date YYYY-MM-DD
+function toISOInput(f) {
+  if (!f) return '';
+  const s = String(f).split('T')[0];
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)) {
+    const [d,m,y] = s.split('/');
+    return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+  }
+  return '';
+}
+
 function editIngreso(id) {
   const r = CACHE.ingresos.find(x => x.id === id);
   if (!r) return;
   
   const esVenta = !!r.esVenta;
+  // Si es una venta con plan de cuotas, abrir el editor completo de venta
+  if (esVenta) {
+    const ventas = JSON.parse(localStorage.getItem('dash_ventas') || '[]');
+    // Match por id de ingreso guardado en cuotas/adelanto, o por nombre de cliente
+    let v = ventas.find(x => x.adelantoIngresoId === id)
+         || ventas.find(x => (x.cuotas||[]).some(c => c.ingresoId === id))
+         || ventas.find(x => x.cliente === r.nombre);
+    if (v) { editVentaCompleta(v.id); return; }
+  }
   document.getElementById('ei-id').value       = r.id;
   document.getElementById('ei-es-venta').value = esVenta;
   document.getElementById('ei-concepto').value = r.concepto||'';
@@ -3441,16 +3588,19 @@ function confirmarCobro() {
         const d = parseFechaLocal(fecha);
         CACHE.ingresos.unshift({ id:res.id, fecha, nombre:v.cliente, concepto:`Saldo pendiente - ${v.producto||''} (${metodo})`, monto, vendedor:v.vendedor||'', esVenta:true, mes:d.mes, anio:d.anio });
         
-        // Registrar movimiento en tesorería si se eligió cuenta
+        // Comisión de pasarela sobre el saldo cobrado
+        const comSaldo = calcComisionPasarela(monto, v.comTipo, v.comValor);
+
+        // Registrar movimiento en tesorería por el NETO si se eligió cuenta
         if (cuentaId) {
           const movs = getMovimientos();
-          movs.push({ id:'MOV_'+Date.now(), tipo:'entrada', fecha, cuentaId, cuentaDestId:'', desc:`Saldo pendiente - ${v.cliente}`, monto });
+          const netoSaldo = monto - comSaldo;
+          movs.push({ id:'MOV_'+Date.now(), tipo:'entrada', fecha, cuentaId, cuentaDestId:'', desc:`Saldo pendiente - ${v.cliente}${comSaldo>0?' · neto s/comisión '+fmt(comSaldo):''}`, monto: netoSaldo });
           saveMovsLocal(movs);
           renderTesoreria();
         }
 
-        // Comisión de pasarela sobre el saldo cobrado
-        const comSaldo = calcComisionPasarela(monto, v.comTipo, v.comValor);
+        // Comisión como gasto
         if (comSaldo > 0) registrarComisionPasarela(comSaldo, fecha, `${v.cliente} (saldo)`);
 
         renderIngresosFromCache();
@@ -3489,14 +3639,18 @@ function confirmarCobro() {
   c.fechaCobro = fecha; c.notas = notas; c.cuentaId = cuentaId;
   localStorage.setItem('dash_ventas', JSON.stringify(ventas));
 
-  // Registrar en tesorería si se eligió una cuenta
+  // Comisión de pasarela sobre el monto cobrado en esta cuota
+  const comCuota = calcComisionPasarela(monto, v.comTipo, v.comValor);
+
+  // Registrar en tesorería el NETO (monto menos comisión) si se eligió una cuenta
   if (cuentaId) {
     const movs = getMovimientos();
     const movId = 'MOV_C_' + Date.now();
+    const netoCuota = monto - comCuota;
     movs.push({
       id: movId, tipo: 'entrada', fecha, cuentaId, cuentaDestId: '',
-      desc: `Cuota ${c.num}/${v.nCuotas} - ${v.cliente} (${metodo})${notas ? ' · ' + notas : ''}`,
-      monto, fromCuota: true
+      desc: `Cuota ${c.num}/${v.nCuotas} - ${v.cliente} (${metodo})${comCuota>0?' · neto s/comisión '+fmt(comCuota):''}${notas ? ' · ' + notas : ''}`,
+      monto: netoCuota, fromCuota: true
     });
     saveMovsLocal(movs);
     c.movId = movId;
@@ -3510,8 +3664,7 @@ function confirmarCobro() {
       CACHE.ingresos.unshift({ id:res.id, fecha, nombre:v.cliente, concepto:`Cuota ${c.num}/${v.nCuotas} - ${v.producto||''} (${metodo})`, monto, vendedor:v.vendedor||'', esVenta:true, mes:d.mes, anio:d.anio });
       c.ingresoId = res.id;
       localStorage.setItem('dash_ventas', JSON.stringify(ventas));
-      // Comisión de pasarela sobre la cuota cobrada
-      const comCuota = calcComisionPasarela(monto, v.comTipo, v.comValor);
+      // Comisión de pasarela como gasto
       if (comCuota > 0) registrarComisionPasarela(comCuota, fecha, `${v.cliente} (cuota ${c.num}/${v.nCuotas})`);
       renderIngresosFromCache();
       renderDashboardFromCache();
@@ -4800,6 +4953,13 @@ function openModal(name) {
   // Poblar método de pago con cuentas de tesorería
   if (name === 'venta') {
     fillMetodoPagoSelect();
+    // Asegurar modo "crear" (por si venía de una edición)
+    if (typeof resetVentaModal === 'function') {
+      resetVentaModal();
+      const hoy = new Date().toISOString().split('T')[0];
+      const vf = document.getElementById('v-fecha'); if (vf) vf.value = hoy;
+      const vpv = document.getElementById('v-primer-venc'); if (vpv) vpv.value = hoy;
+    }
   }
 }
 function closeModal(name) { document.getElementById('modal-'+name).classList.remove('open'); }
