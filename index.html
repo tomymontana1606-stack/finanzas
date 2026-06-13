@@ -771,6 +771,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
 .cfg-red:hover   { border-color:rgba(231,76,60,0.4); background:rgba(231,76,60,0.06); }
 .loader { display:flex; align-items:center; justify-content:center; padding:40px; color:var(--muted); font-size:13px; gap:10px; }
 .spinner { width:18px; height:18px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; }
+.btn-spinner { display:inline-block; width:13px; height:13px; border:2px solid rgba(255,255,255,0.35); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; vertical-align:-2px; margin-right:4px; }
 .toast.show { transform:translateY(0); opacity:1; }
 .toast.ok  { border-color:rgba(46,204,113,.3); color:var(--green); }
 .toast.err { border-color:rgba(231,76,60,.3);  color:var(--red); }
@@ -1566,7 +1567,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
     <div class="form-group"><label class="form-label">Concepto</label><input class="form-input" id="is-concepto" placeholder="Descripción del ingreso" /></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('ingreso-simple')">Cancelar</button>
-      <button class="btn-save" onclick="saveIngresoSimple()">Guardar</button>
+      <button class="btn-save" onclick="guardarConBloqueo(this, saveIngresoSimple, 'Guardando ingreso...')">Guardar</button>
     </div>
   </div>
 </div>
@@ -1649,7 +1650,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
     <div class="form-group"><label class="form-label">Notas</label><input class="form-input" id="v-notas" placeholder="Condiciones, observaciones..." /></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('venta')">Cancelar</button>
-      <button class="btn-save" id="v-save-btn" onclick="saveVenta()">Registrar venta</button>
+      <button class="btn-save" id="v-save-btn" onclick="guardarConBloqueo(this, saveVenta, 'Guardando venta...')">Registrar venta</button>
     </div>
   </div>
 </div>
@@ -1707,7 +1708,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
     <div class="form-group"><label class="form-label">Notas</label><input class="form-input" id="ei-notas" placeholder="Observaciones..." /></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('edit-ingreso')">Cancelar</button>
-      <button class="btn-save" onclick="updateIngreso()">Guardar cambios</button>
+      <button class="btn-save" onclick="guardarConBloqueo(this, updateIngreso, 'Guardando...')">Guardar cambios</button>
     </div>
   </div>
 </div>
@@ -1751,7 +1752,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
     </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('gasto')">Cancelar</button>
-      <button class="btn-save" onclick="saveGasto()">Guardar</button>
+      <button class="btn-save" onclick="guardarConBloqueo(this, saveGasto, 'Guardando gasto...')">Guardar</button>
     </div>
   </div>
 </div>
@@ -1795,7 +1796,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
     </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('edit-gasto')">Cancelar</button>
-      <button class="btn-save" onclick="updateGasto()">Guardar cambios</button>
+      <button class="btn-save" onclick="guardarConBloqueo(this, updateGasto, 'Guardando...')">Guardar cambios</button>
     </div>
   </div>
 </div>
@@ -1861,7 +1862,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
     <div class="form-group"><label class="form-label">Notas</label><input class="form-input" id="sub-notas" placeholder="Observaciones, condiciones, link de factura..." /></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('sub')">Cancelar</button>
-      <button class="btn-save" onclick="saveSub()">Guardar</button>
+      <button class="btn-save" onclick="guardarConBloqueo(this, saveSub, 'Guardando suscripción...')">Guardar</button>
     </div>
   </div>
 </div>
@@ -1929,7 +1930,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
     <div class="form-group"><label class="form-label">Notas</label><input class="form-input" id="es-notas" /></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('edit-sub')">Cancelar</button>
-      <button class="btn-save" onclick="updateSub()">Guardar cambios</button>
+      <button class="btn-save" onclick="guardarConBloqueo(this, updateSub, 'Guardando...')">Guardar cambios</button>
     </div>
   </div>
 </div>
@@ -1960,7 +1961,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
     </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('miembro')">Cancelar</button>
-      <button class="btn-save" onclick="saveMiembro()">Guardar</button>
+      <button class="btn-save" onclick="guardarConBloqueo(this, saveMiembro, 'Guardando miembro...')">Guardar</button>
     </div>
   </div>
 </div>
@@ -1992,7 +1993,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
     </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('edit-miembro')">Cancelar</button>
-      <button class="btn-save" onclick="updateMiembro()">Guardar cambios</button>
+      <button class="btn-save" onclick="guardarConBloqueo(this, updateMiembro, 'Guardando...')">Guardar cambios</button>
     </div>
   </div>
 </div>
@@ -2032,7 +2033,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
     <div class="form-group"><label class="form-label">Descripción / Datos de la cuenta</label><input class="form-input" id="cta-desc" placeholder="CBU, dirección wallet, usuario..." /></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('cuenta')">Cancelar</button>
-      <button class="btn-save" onclick="saveCuenta()">Guardar</button>
+      <button class="btn-save" onclick="guardarConBloqueo(this, saveCuenta, 'Guardando cuenta...')">Guardar</button>
     </div>
   </div>
 </div>
@@ -2064,7 +2065,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
     <div class="form-group"><label class="form-label">Monto</label><input class="form-input" type="number" id="mov-monto" placeholder="0" min="0" step="0.01" /></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('movimiento')">Cancelar</button>
-      <button class="btn-save" onclick="saveMovimiento()">Guardar</button>
+      <button class="btn-save" onclick="guardarConBloqueo(this, saveMovimiento, 'Guardando movimiento...')">Guardar</button>
     </div>
   </div>
 </div>
@@ -2112,7 +2113,7 @@ body { background:var(--bg); color:var(--text); font-family:var(--font); font-si
     </div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('cobro')">Cancelar</button>
-      <button class="btn-save" onclick="confirmarCobro()">Confirmar cobro</button>
+      <button class="btn-save" onclick="guardarConBloqueo(this, confirmarCobro, 'Registrando cobro...')">Confirmar cobro</button>
     </div>
   </div>
 </div>
@@ -2898,7 +2899,7 @@ function matchCuentaByMetodo(metodoPago) {
 }
 
 async function registrarEnTesoreria(cuentaId, fecha, desc, monto) {
-  if (!cuentaId || !monto) return;
+  if (!cuentaId || !monto) return null;
   try {
     const res = await api({ action: 'addMovimiento', tipo: 'entrada', fecha, cuentaId, cuentaDestId: '', desc, monto });
     if (res.ok) {
@@ -2906,10 +2907,12 @@ async function registrarEnTesoreria(cuentaId, fecha, desc, monto) {
       renderTesoreria();
       const cuenta = CACHE.cuentas.find(c => c.id === cuentaId);
       showToast(`Registrado en ${cuenta?.nombre||'tesorería'} ✓`, 'ok');
+      return res.id;
     }
   } catch(e) {
     console.error('Error registrando en tesorería:', e);
   }
+  return null;
 }
 
 async function saveVenta() {
@@ -2962,12 +2965,67 @@ async function saveVenta() {
       nuevasCuotas.push({ num:numCuota, monto:porCuotaE, vence:venc, pagada:false });
     }
 
+    // === Recalcular comisión + tesorería del ADELANTO ya cobrado ===
+    // (solo si la venta tiene un adelanto registrado)
+    let nuevoComGastoId = v.adelantoComisionGastoId || null;
+    let nuevoMovId = v.adelantoMovId || null;
+    const cuentaIdAdelanto = cuentaIdSel || v.adelantoCuentaId || '';
+
+    if (adelanto > 0) {
+      const comAdelantoNueva = calcComisionPasarela(adelanto, comTipo, comValor);
+
+      // Fallback para ventas viejas sin IDs guardados: buscar por coincidencia
+      let gastoIdViejo = v.adelantoComisionGastoId;
+      if (!gastoIdViejo) {
+        const gMatch = CACHE.gastos.find(g =>
+          g.categoria === 'Comisiones de pasarela' &&
+          (g.concepto||'').includes(v.cliente) &&
+          (g.concepto||'').toLowerCase().includes('adelanto'));
+        if (gMatch) gastoIdViejo = gMatch.id;
+      }
+      let movIdViejo = v.adelantoMovId;
+      if (!movIdViejo && v.cliente) {
+        const mMatch = CACHE.movimientos.find(mv =>
+          mv.tipo === 'entrada' &&
+          (mv.desc||'').includes('Adelanto') &&
+          (mv.desc||'').includes(v.cliente));
+        if (mMatch) movIdViejo = mMatch.id;
+      }
+
+      // 1) Corregir el GASTO de comisión del adelanto
+      if (gastoIdViejo) {
+        try { await api({ action:'deleteGasto', id: gastoIdViejo }); } catch(e){}
+        CACHE.gastos = CACHE.gastos.filter(g => g.id !== gastoIdViejo);
+        nuevoComGastoId = null;
+      }
+      if (comAdelantoNueva > 0) {
+        nuevoComGastoId = await registrarComisionPasarela(comAdelantoNueva, fecha, `${cliente} (adelanto)`);
+      }
+
+      // 2) Corregir el MOVIMIENTO de tesorería del adelanto (entra el neto)
+      if (movIdViejo) {
+        try { await api({ action:'deleteMovimiento', id: movIdViejo }); } catch(e){}
+        CACHE.movimientos = CACHE.movimientos.filter(mv => mv.id !== movIdViejo);
+        nuevoMovId = null;
+      }
+      if (cuentaIdAdelanto) {
+        const netoAdelanto = adelanto - comAdelantoNueva;
+        const descTesoE = comAdelantoNueva > 0
+          ? `Adelanto - ${cliente} (${producto}) · neto s/comisión ${fmt(comAdelantoNueva)}`
+          : `Adelanto - ${cliente} (${producto})`;
+        nuevoMovId = await registrarEnTesoreria(cuentaIdAdelanto, fecha, descTesoE, netoAdelanto);
+      }
+    }
+
     ventas[idx] = {
       ...v,
       cliente, telefono, email, fecha, vendedor, producto,
       metodoPago: metodoPagoE, total, adelanto, saldo: saldoE,
       nCuotas, cuotas: nuevasCuotas, notas,
-      comTipo, comValor
+      comTipo, comValor,
+      adelantoComisionGastoId: nuevoComGastoId,
+      adelantoMovId: nuevoMovId,
+      adelantoCuentaId: cuentaIdAdelanto
     };
     localStorage.setItem('dash_ventas', JSON.stringify(ventas));
 
@@ -2975,6 +3033,8 @@ async function saveVenta() {
     resetVentaModal();
     closeModal('venta');
     renderIngresosFromCache();
+    renderGastosFromCache();
+    renderTesoreria();
     renderDashboardFromCache();
     renderCuotas();
     return;
@@ -3029,12 +3089,15 @@ async function saveVenta() {
           const descTeso = comAdelanto > 0
             ? `Adelanto - ${cliente} (${producto}) · neto s/comisión ${fmt(comAdelanto)}`
             : `Adelanto - ${cliente} (${producto})`;
-          await registrarEnTesoreria(cuentaId, fecha, descTeso, neto);
+          const movId = await registrarEnTesoreria(cuentaId, fecha, descTeso, neto);
+          if (movId) ventaObj.adelantoMovId = movId;
+          ventaObj.adelantoCuentaId = cuentaId;
         }
 
         // Registrar la comisión como gasto
         if (comAdelanto > 0) {
-          await registrarComisionPasarela(comAdelanto, fecha, `${cliente} (adelanto)`);
+          const gastoId = await registrarComisionPasarela(comAdelanto, fecha, `${cliente} (adelanto)`);
+          if (gastoId) ventaObj.adelantoComisionGastoId = gastoId;
         }
 
         // Guardar el id del ingreso del adelanto en la venta (para poder editarla luego)
@@ -3127,7 +3190,7 @@ function calcVenta() {
 // Registra la comisión de pasarela como gasto (categoría "Comisiones de pasarela")
 async function registrarComisionPasarela(monto, fecha, clienteDesc) {
   const m = parseFloat(monto) || 0;
-  if (m <= 0) return;
+  if (m <= 0) return null;
   const categoria = 'Comisiones de pasarela';
   const concepto = `Comisión pasarela - ${clienteDesc || ''}`.trim();
   try {
@@ -3135,8 +3198,10 @@ async function registrarComisionPasarela(monto, fecha, clienteDesc) {
     if (res && res.ok) {
       const d = parseFechaLocal(fecha);
       CACHE.gastos.unshift({ id:res.id, fecha, categoria, concepto, monto:m, metodo:'', pagador:'', mes:d.mes, anio:d.anio });
+      return res.id;
     }
   } catch(e) { console.error('Error registrando comisión pasarela:', e); }
+  return null;
 }
 
 // Abre el modal de venta en modo EDICIÓN, precargado con la venta completa
@@ -5014,6 +5079,29 @@ function showToast(msg, type='ok') {
   toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
 }
 
+// Evita doble-click: bloquea el botón mientras se procesa y muestra "Cargando..."
+async function guardarConBloqueo(btn, handler, textoCargando) {
+  if (!btn || btn.dataset.loading === '1') return; // ya está procesando, ignorar
+  btn.dataset.loading = '1';
+  const textoOriginal = btn.innerHTML;
+  btn.disabled = true;
+  btn.style.opacity = '0.7';
+  btn.style.cursor = 'not-allowed';
+  btn.innerHTML = `<span class="btn-spinner"></span> ${textoCargando || 'Guardando...'}`;
+  try {
+    await handler();
+  } catch (e) {
+    console.error('Error en guardado:', e);
+    showToast('Ocurrió un error', 'err');
+  } finally {
+    btn.dataset.loading = '0';
+    btn.disabled = false;
+    btn.style.opacity = '';
+    btn.style.cursor = '';
+    btn.innerHTML = textoOriginal;
+  }
+}
+
 // Timeline chart date range filter
 document.addEventListener('DOMContentLoaded', () => {
   const filterBtns = document.querySelectorAll('.filter-btn');
@@ -5430,6 +5518,18 @@ function renderChartTimeline() {
     }
   });
 
+  // Restar comisiones de pasarela para mostrar el NETO realmente cobrado
+  (CACHE.gastos || []).forEach(function(g) {
+    if ((g.categoria || '') !== 'Comisiones de pasarela') return;
+    var day = new Date(g.fecha).getDate();
+    if(g.mes === mesKey && String(g.anio) === String(y)) {
+      i1[day] = (i1[day] || 0) - parseFloat(g.monto || 0);
+    }
+    if(g.mes === mesPrevKey && String(g.anio) === String(py)) {
+      i2[day] = (i2[day] || 0) - parseFloat(g.monto || 0);
+    }
+  });
+
   var a1 = 0, a2 = 0, d1 = [], d2 = [];
   for(var i = 1; i <= 31; i++) {
     a1 += i1[i] || 0;
@@ -5446,7 +5546,7 @@ function renderChartTimeline() {
   out += '<div>';
   out += '<div style="font-size:10px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">DASHBOARD FINANCIERO</div>';
   out += '<div style="font-size:20px;font-weight:700;color:#fff">Cash Collected · ' + months[m] + ' 2026</div>';
-  out += '<div style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:4px">Acumulado</div>';
+  out += '<div style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:4px">Neto cobrado (descontando comisiones de pasarela)</div>';
   out += '</div>';
   out += '<div style="text-align:right">';
   out += '<div style="font-size:30px;font-weight:700;color:#00E396;line-height:1">' + fmt(t1) + '</div>';
